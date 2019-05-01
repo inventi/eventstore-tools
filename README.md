@@ -5,7 +5,7 @@ Various Kotlin tools for [EventStore](https://eventstore.org/)
 
 ## Projection Init
 Automatically uploads projections to the eventstore. Can detect that projection have changed and update it if necessary.
-For no it only creates projections as continuous with emit enabled.
+For now it only creates projections as continuous with emit enabled.
 Below is possible configuration options:
 
 ```yaml
