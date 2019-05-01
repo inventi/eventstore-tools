@@ -28,11 +28,8 @@ import javax.validation.constraints.NotEmpty
 class EventStoreInitConfig {
 
     var projectionsInit: ProjectionsProperties = ProjectionsProperties()
-    @field:NotEmpty
     lateinit var endpoint: String
-    @field:NotEmpty
     lateinit var username: String
-    @field:NotEmpty
     lateinit var password: String
 }
 
