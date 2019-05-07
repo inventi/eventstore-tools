@@ -18,6 +18,7 @@ import org.springframework.web.client.RestTemplate
 import org.springframework.web.client.postForObject
 import org.springframework.web.util.UriComponentsBuilder.fromUriString
 import java.io.File
+import java.net.URL
 import javax.validation.constraints.NotEmpty
 
 
@@ -68,10 +69,12 @@ class ProjectionInit(private val builder: RestTemplateBuilder,
                 .build()
 
 
-        val filesPath = javaClass.getResource(eventstore.projectionsInit.folder).toURI()
-        val walk = File(filesPath).walkBottomUp()
-        walk.filter { it.extension == "js" }.forEach {
-            ensureProjection(template, it.name.dropLast(3), it.readBytes())
+        val path: URL? = javaClass.getResource(eventstore.projectionsInit.folder)
+        path?.let {
+            val walk = File(it.toURI()).walkBottomUp()
+            walk.filter { it.extension == "js" }.forEach {
+                ensureProjection(template, it.name.dropLast(3), it.readBytes())
+            }
         }
     }
 
