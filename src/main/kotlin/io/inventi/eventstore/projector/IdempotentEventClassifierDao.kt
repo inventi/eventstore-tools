@@ -11,12 +11,14 @@ interface IdempotentEventClassifierDao : SqlObject {
         INSERT INTO $tableName (
             event_id,
             idempotency_classifier,
-            created_at
+            created_at,
+            group_name
         )
             VALUES (
             :eventId,
             :idempotencyClassifier,
-            :createdAt
+            :createdAt,
+            :groupName
             )
             """
         handle.createUpdate(insertQuery)
