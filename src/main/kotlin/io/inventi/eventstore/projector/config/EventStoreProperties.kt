@@ -1,4 +1,4 @@
-package io.inventi.eventstore.projector.model
+package io.inventi.eventstore.projector.config
 
 import com.github.msemys.esjc.EventStoreBuilder
 import org.springframework.boot.context.properties.ConfigurationProperties
@@ -14,6 +14,7 @@ class EventStoreConfig {
     @Bean
     fun eventStore(properties: EventStoreProperties) =
             EventStoreBuilder.newBuilder()
+                    .maxReconnections(-1)
                     .singleNodeAddress(properties.host, properties.port)
                     .userCredentials(properties.username, properties.password)
                     .build();

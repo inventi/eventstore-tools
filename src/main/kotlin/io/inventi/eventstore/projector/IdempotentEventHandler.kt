@@ -2,6 +2,7 @@ package io.inventi.eventstore.projector
 
 import com.fasterxml.jackson.databind.ObjectMapper
 import com.github.msemys.esjc.EventStore
+import com.github.msemys.esjc.EventStoreException
 import com.github.msemys.esjc.PersistentSubscription
 import com.github.msemys.esjc.PersistentSubscriptionCreateStatus
 import com.github.msemys.esjc.PersistentSubscriptionListener
@@ -39,14 +40,15 @@ abstract class IdempotentEventHandler(
     override fun start() {
         ensureSubscription()
 
-        val value = object : PersistentSubscriptionListener {
+        val persistentSubscription = object : PersistentSubscriptionListener {
 
-            override fun onClose(subscription: PersistentSubscription?, reason: SubscriptionDropReason?, exception: Exception?) {
-                if (exception != null) {
-                    throw exception
+            override fun onClose(subscription: PersistentSubscription?, reason: SubscriptionDropReason?, exception: Exception) {
+                if (exception is EventStoreException) {
+                    logger.warn("Reconnecting...")
+                    eventStore.subscribeToPersistent(streamName, groupName, this)
                 }
 
-                TODO("implement on close")
+                throw exception
             }
 
             @Transactional
@@ -116,7 +118,7 @@ abstract class IdempotentEventHandler(
             }
         }
 
-        eventStore.subscribeToPersistent(streamName, groupName, value)
+        eventStore.subscribeToPersistent(streamName, groupName, persistentSubscription)
         running = true
     }
 
