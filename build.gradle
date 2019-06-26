@@ -6,7 +6,7 @@ plugins {
 apply plugin: 'maven-publish'
 
 group = 'io.inventi'
-version = '0.1'
+version = '0.2'
 sourceCompatibility = '1.8'
 
 repositories {
@@ -16,8 +16,16 @@ repositories {
 dependencies {
 	implementation 'org.springframework.boot:spring-boot-starter:2.1.3.RELEASE'
 	implementation 'org.springframework.boot:spring-boot-starter-web:2.1.3.RELEASE'
+	implementation 'org.springframework.boot:spring-boot-starter-data-jpa:2.1.3.RELEASE'
 	implementation 'org.jetbrains.kotlin:kotlin-reflect'
 	implementation 'org.jetbrains.kotlin:kotlin-stdlib-jdk8'
+	implementation 'com.github.msemys:esjc:2.1.0'
+	implementation 'com.fasterxml.jackson.module:jackson-module-kotlin:2.9.+'
+	implementation 'org.jdbi:jdbi3-core:3.8.0'
+	implementation 'org.jdbi:jdbi3-kotlin:3.8.0'
+	implementation 'org.jdbi:jdbi3-kotlin-sqlobject:3.8.0'
+	testImplementation 'org.junit.jupiter:junit-jupiter-api:5.3.1'
+	testRuntimeOnly 'org.junit.jupiter:junit-jupiter-engine:5.3.1'
 }
 
 compileKotlin {
@@ -26,13 +34,21 @@ compileKotlin {
 		jvmTarget = '1.8'
 	}
 }
-
+task sourcesJar(type: Jar, dependsOn: classes) {
+	classifier = 'sources'
+	from sourceSets.main.allSource
+}
 compileTestKotlin {
 	kotlinOptions {
 		freeCompilerArgs = ['-Xjsr305=strict']
 		jvmTarget = '1.8'
 	}
 }
+
+artifacts {
+	archives sourcesJar
+}
+
 
 publishing {
 	publications {
