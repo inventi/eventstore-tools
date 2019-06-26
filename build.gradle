@@ -6,7 +6,7 @@ plugins {
 apply plugin: 'maven-publish'
 
 group = 'com.github.inventi'
-version = '0.55'
+version = '1.0-SNAPSHOT'
 sourceCompatibility = '1.8'
 
 repositories {
