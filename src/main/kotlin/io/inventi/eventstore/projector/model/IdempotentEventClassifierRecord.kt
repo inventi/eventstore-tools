@@ -4,7 +4,7 @@ import java.time.ZonedDateTime
 
 
 data class IdempotentEventClassifierRecord(
-        val id: String,
+        val eventId: String,
         private val streamName: String,
         private val groupName: String,
         private val eventType: String,

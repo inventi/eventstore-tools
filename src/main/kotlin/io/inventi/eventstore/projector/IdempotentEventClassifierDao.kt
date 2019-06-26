@@ -9,12 +9,12 @@ interface IdempotentEventClassifierDao : SqlObject {
 
         val insertQuery = """
         INSERT INTO $tableName (
-            id,
+            event_id,
             idempotency_classifier,
             created_at
         )
             VALUES (
-            :id,
+            :eventId,
             :idempotencyClassifier,
             :createdAt
             )

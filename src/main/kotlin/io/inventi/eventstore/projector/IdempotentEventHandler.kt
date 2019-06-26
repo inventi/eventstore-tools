@@ -17,6 +17,8 @@ import io.inventi.eventstore.projector.model.IdempotentEventClassifierRecord
 import io.inventi.eventstore.projector.model.MethodParametersType
 import io.inventi.eventstore.util.LoggerDelegate
 import org.jdbi.v3.core.statement.UnableToExecuteStatementException
+import org.springframework.beans.factory.annotation.Autowired
+import org.springframework.beans.factory.annotation.Value
 import org.springframework.context.SmartLifecycle
 import org.springframework.transaction.annotation.Transactional
 import java.lang.reflect.Method
@@ -24,16 +26,24 @@ import java.util.concurrent.CompletionException
 
 
 abstract class IdempotentEventHandler(
-        private val eventStore: EventStore,
-        private val idempotentEventClassifierDao: IdempotentEventClassifierDao,
         private val streamName: String,
-        private val groupName: String,
-        private val tableName: String,
-        private val objectMapper: ObjectMapper
+        private val groupName: String
 ) : SmartLifecycle {
     companion object {
         private val logger by LoggerDelegate()
     }
+
+    @field:Value("\${eventstore.idempotent-event-classifier.table-name}")
+    lateinit var tableName: String
+
+    @Autowired
+    private lateinit var idempotentEventClassifierDao: IdempotentEventClassifierDao
+
+    @Autowired
+    private lateinit var eventStore: EventStore
+
+    @Autowired
+    private lateinit var objectMapper: ObjectMapper
 
     var running: Boolean = false
 
@@ -59,7 +69,7 @@ abstract class IdempotentEventHandler(
 
                 try {
                     val idempotentEventRecord = IdempotentEventClassifierRecord(
-                            id = event.eventId.toString(),
+                            eventId = event.eventId.toString(),
                             eventType = event.eventType,
                             streamName = streamName,
                             groupName = groupName
