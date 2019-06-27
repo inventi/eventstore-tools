@@ -32,6 +32,8 @@ class EventStoreInitConfig {
     lateinit var endpoint: String
     lateinit var username: String
     lateinit var password: String
+    lateinit var host: String
+    var port: Int = 0
 }
 
 

@@ -1,6 +1,6 @@
-package lt.smefinance.payments.projection.projector.config
+package io.inventi.eventstore.eventhandler.config
 
-import io.inventi.eventstore.projector.IdempotentEventClassifierDao
+import io.inventi.eventstore.eventhandler.IdempotentEventClassifierDao
 import org.jdbi.v3.core.Jdbi
 import org.jdbi.v3.sqlobject.kotlin.onDemand
 import org.springframework.context.annotation.Bean

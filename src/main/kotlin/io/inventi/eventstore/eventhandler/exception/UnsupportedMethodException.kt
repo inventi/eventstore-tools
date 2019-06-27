@@ -1,4 +1,4 @@
-package io.inventi.eventstore.projector.exception
+package io.inventi.eventstore.eventhandler.exception
 
 import java.lang.RuntimeException
 

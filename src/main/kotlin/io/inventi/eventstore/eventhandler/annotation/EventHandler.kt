@@ -1,4 +1,4 @@
-package io.inventi.eventstore.projector.annotation
+package io.inventi.eventstore.eventhandler.annotation
 
 
 @Target(AnnotationTarget.FUNCTION)

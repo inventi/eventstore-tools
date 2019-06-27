@@ -1,6 +1,6 @@
-package io.inventi.eventstore.projector
+package io.inventi.eventstore.eventhandler
 
-import io.inventi.eventstore.projector.model.IdempotentEventClassifierRecord
+import io.inventi.eventstore.eventhandler.model.IdempotentEventClassifierRecord
 import org.jdbi.v3.sqlobject.SqlObject
 
 interface IdempotentEventClassifierDao : SqlObject {
