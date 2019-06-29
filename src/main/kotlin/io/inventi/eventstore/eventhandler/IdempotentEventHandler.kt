@@ -33,7 +33,7 @@ abstract class IdempotentEventHandler(
         private val logger by LoggerDelegate()
     }
 
-    @field:Value("\${eventstore.idempotent-event-classifier.table-name}")
+    @field:Value("\${spring.flyway.placeholders.idempotency}")
     lateinit var tableName: String
 
     @Autowired
