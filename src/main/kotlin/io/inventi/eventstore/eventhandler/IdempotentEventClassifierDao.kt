@@ -8,7 +8,7 @@ interface IdempotentEventClassifierDao : SqlObject {
     fun insert(tableName: String, idempotentEventClassifierRecord: IdempotentEventClassifierRecord) {
 
         val insertQuery = """
-        INSERT INTO  (
+        INSERT INTO $tableName (
             event_id,
             idempotency_classifier,
             created_at,
