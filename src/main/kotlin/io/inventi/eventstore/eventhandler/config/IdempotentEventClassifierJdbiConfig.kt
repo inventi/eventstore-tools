@@ -7,7 +7,7 @@ import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty
 import org.springframework.context.annotation.Bean
 import org.springframework.context.annotation.Configuration
 
-@ConditionalOnProperty("eventstore.subscriptions.enabled")
+@ConditionalOnProperty(value=["eventstore.subscriptions.enabled"], matchIfMissing = true)
 @Configuration
 class IdempotentEventClassifierJdbiConfig {
     @Bean
