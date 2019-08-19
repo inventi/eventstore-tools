@@ -54,7 +54,7 @@ abstract class IdempotentEventHandler(
     @Autowired
     private lateinit var transactionTemplate: TransactionTemplate
 
-    var running: Boolean = false
+    private var running: Boolean = false
 
     override fun start() {
         ensureSubscription()
@@ -82,7 +82,7 @@ abstract class IdempotentEventHandler(
             override fun onEvent(subscription: PersistentSubscription, eventMessage: RetryableResolvedEvent) {
                 if (eventMessage.event == null) {
                     logger.warn("Skipping eventMessage with empty event. Linked eventId: ${eventMessage.link.eventId}")
-                    subscription.acknowledge(eventMessage.link.eventId)
+                    subscription.acknowledge(eventMessage)
                     return
                 }
 
@@ -101,7 +101,7 @@ abstract class IdempotentEventHandler(
                     } catch (e: UnableToExecuteStatementException) {
                         if ("Duplicate entry" in (e.message ?: "") || "duplicate key" in (e.message ?: "")) {
                             logger.warn("Event already handled '${event.eventType}': ${String(event.metadata)}; ${String(event.data)}")
-                            subscription.acknowledge(event.eventId)
+                            subscription.acknowledge(eventMessage)
                             return@execute
                         }
                         throw e
@@ -110,7 +110,7 @@ abstract class IdempotentEventHandler(
                     this@IdempotentEventHandler::class.java
                             .methods.filter { it.isAnnotationPresent(EventHandler::class.java) }
                             .forEach { handleMethod(it, event) }
-                    subscription.acknowledge(event.eventId)
+                    subscription.acknowledge(eventMessage)
                 }
             }
 
@@ -131,12 +131,12 @@ abstract class IdempotentEventHandler(
                     method.invoke(this@IdempotentEventHandler, eventData)
 
                 } catch (e: Exception) {
-                    logger.error("""Failure on method invocation ${method.name}:
-                       |eventId: ${event.eventId}
-                       |eventType: ${event.eventType}
-                       |eventData: ${String(event.data)}
-                       |streamName: $streamName
-                       |groupName: $groupName""".trimMargin())
+                    logger.error("Failure on method invocation ${method.name}: " +
+                            "eventId: ${event.eventId}, " +
+                            "eventType: ${event.eventType}, " +
+                            "streamName: $streamName, " +
+                            "groupName: $groupName, " +
+                            "eventData: \n${String(event.data)}")
                     throw e
                 }
             }
