@@ -62,7 +62,7 @@ abstract class IdempotentEventHandler(
         val persistentSubscription = object : PersistentSubscriptionListener {
 
             override fun onClose(subscription: PersistentSubscription?, reason: SubscriptionDropReason, exception: Exception?) {
-                logger.warn("Subscription was closed. Reason: $reason")
+                logger.warn("Subscription StreamName: $streamName GroupName: $groupName was closed. Reason: $reason")
                 when {
                     exception is EventStoreException -> {
                         logger.warn("Eventstore connection lost: ${exception.message}")
