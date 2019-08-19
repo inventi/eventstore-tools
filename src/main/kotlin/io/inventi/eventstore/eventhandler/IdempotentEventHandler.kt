@@ -80,6 +80,12 @@ abstract class IdempotentEventHandler(
             }
 
             override fun onEvent(subscription: PersistentSubscription, eventMessage: RetryableResolvedEvent) {
+                if (eventMessage.event == null) {
+                    logger.warn("Skipping eventMessage with empty event. Linked eventId: ${eventMessage.link.eventId}")
+                    subscription.acknowledge(eventMessage.link.eventId)
+                    return
+                }
+
                 transactionTemplate.execute {
                     val event = eventMessage.event
                     logger.trace("Received event '${event.eventType}': ${String(event.metadata)}; ${String(event.data)}")
@@ -125,14 +131,12 @@ abstract class IdempotentEventHandler(
                     method.invoke(this@IdempotentEventHandler, eventData)
 
                 } catch (e: Exception) {
-                    logger.error("""
-                       Failure on method invocation ${method.name}:
-                       eventId: ${event.eventId}
-                       eventType: ${event.eventType}
-                       eventData: ${String(event.data)}
-                       streamName: $streamName
-                       groupName: $groupName
-                    """)
+                    logger.error("""Failure on method invocation ${method.name}:
+                       |eventId: ${event.eventId}
+                       |eventType: ${event.eventType}
+                       |eventData: ${String(event.data)}
+                       |streamName: $streamName
+                       |groupName: $groupName""".trimMargin())
                     throw e
                 }
             }

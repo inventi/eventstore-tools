@@ -22,6 +22,7 @@ class EventStoreConfig {
     fun eventStore(properties: EventStoreInitConfig) =
             EventStoreBuilder.newBuilder()
                     .maxReconnections(-1)
+                    .persistentSubscriptionAutoAck(false)
                     .singleNodeAddress(properties.host, properties.port)
                     .userCredentials(properties.username, properties.password)
                     .build();
