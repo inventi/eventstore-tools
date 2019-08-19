@@ -30,6 +30,12 @@ abstract class IdempotentEventHandler(
         private val groupName: String
 ) : SmartLifecycle {
     companion object {
+        private val RECOVERABLE_SUBSCRIPTION_DROP_REASONS = setOf(
+                SubscriptionDropReason.ConnectionClosed,
+                SubscriptionDropReason.ServerError,
+                SubscriptionDropReason.SubscribingError,
+                SubscriptionDropReason.CatchUpError
+        )
         private val logger by LoggerDelegate()
     }
 
@@ -48,25 +54,38 @@ abstract class IdempotentEventHandler(
     @Autowired
     private lateinit var transactionTemplate: TransactionTemplate
 
-
-    var running: Boolean = false
+    private var running: Boolean = false
 
     override fun start() {
         ensureSubscription()
 
         val persistentSubscription = object : PersistentSubscriptionListener {
 
-            override fun onClose(subscription: PersistentSubscription?, reason: SubscriptionDropReason?, exception: Exception) {
-                if (exception is EventStoreException) {
-                    logger.warn("Eventstore connection lost: ${exception.message}")
-                    logger.warn("Reconnecting into StreamName: $streamName, GroupName: $groupName")
-                    eventStore.subscribeToPersistent(streamName, groupName, this)
-                } else {
-                    throw exception
+            override fun onClose(subscription: PersistentSubscription?, reason: SubscriptionDropReason, exception: Exception?) {
+                logger.warn("Subscription StreamName: $streamName GroupName: $groupName was closed. Reason: $reason")
+                when {
+                    exception is EventStoreException -> {
+                        logger.warn("Eventstore connection lost: ${exception.message}")
+                        logger.warn("Reconnecting into StreamName: $streamName, GroupName: $groupName")
+                        eventStore.subscribeToPersistent(streamName, groupName, this)
+                    }
+                    RECOVERABLE_SUBSCRIPTION_DROP_REASONS.contains(reason) -> {
+                        logger.warn("Reconnecting into StreamName: $streamName, GroupName: $groupName")
+                        eventStore.subscribeToPersistent(streamName, groupName, this)
+                    }
+                    exception != null -> {
+                        throw exception
+                    }
                 }
             }
 
             override fun onEvent(subscription: PersistentSubscription, eventMessage: RetryableResolvedEvent) {
+                if (eventMessage.event == null) {
+                    logger.warn("Skipping eventMessage with empty event. Linked eventId: ${eventMessage.link.eventId}")
+                    subscription.acknowledge(eventMessage)
+                    return
+                }
+
                 transactionTemplate.execute {
                     val event = eventMessage.event
                     logger.trace("Received event '${event.eventType}': ${String(event.metadata)}; ${String(event.data)}")
@@ -82,7 +101,7 @@ abstract class IdempotentEventHandler(
                     } catch (e: UnableToExecuteStatementException) {
                         if ("Duplicate entry" in (e.message ?: "") || "duplicate key" in (e.message ?: "")) {
                             logger.warn("Event already handled '${event.eventType}': ${String(event.metadata)}; ${String(event.data)}")
-                            subscription.acknowledge(event.eventId)
+                            subscription.acknowledge(eventMessage)
                             return@execute
                         }
                         throw e
@@ -91,7 +110,7 @@ abstract class IdempotentEventHandler(
                     this@IdempotentEventHandler::class.java
                             .methods.filter { it.isAnnotationPresent(EventHandler::class.java) }
                             .forEach { handleMethod(it, event) }
-                    subscription.acknowledge(event.eventId)
+                    subscription.acknowledge(eventMessage)
                 }
             }
 
@@ -112,7 +131,12 @@ abstract class IdempotentEventHandler(
                     method.invoke(this@IdempotentEventHandler, eventData)
 
                 } catch (e: Exception) {
-                    logger.error("Failure on method invocation. eventRecord: $event streamName: $streamName groupName: $groupName")
+                    logger.error("Failure on method invocation ${method.name}: " +
+                            "eventId: ${event.eventId}, " +
+                            "eventType: ${event.eventType}, " +
+                            "streamName: $streamName, " +
+                            "groupName: $groupName, " +
+                            "eventData: \n${String(event.data)}")
                     throw e
                 }
             }
