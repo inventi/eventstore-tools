@@ -39,6 +39,19 @@ abstract class IdempotentEventHandler(
         private val logger by LoggerDelegate()
     }
 
+    constructor(streamName: String,
+                groupName: String,
+                idempotentEventClassifierDao: IdempotentEventClassifierDao,
+                eventStore: EventStore,
+                objectMapper: ObjectMapper,
+                transactionTemplate: TransactionTemplate) : this(streamName, groupName) {
+
+        this.idempotentEventClassifierDao = idempotentEventClassifierDao
+        this.eventStore = eventStore
+        this.objectMapper = objectMapper
+        this.transactionTemplate = transactionTemplate
+    }
+
     @field:Value("\${spring.flyway.placeholders.idempotency}")
     lateinit var tableName: String
 
