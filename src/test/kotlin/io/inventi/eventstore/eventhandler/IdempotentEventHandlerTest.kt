@@ -12,50 +12,43 @@ import com.github.msemys.esjc.EventStoreBuilder
 import io.inventi.eventstore.eventhandler.annotation.EventHandler
 import io.inventi.eventstore.eventhandler.events.a.EventA
 import io.inventi.eventstore.eventhandler.events.b.EventB
+import io.inventi.eventstore.eventhandler.util.ExecutingTransactionTemplate
 import org.junit.jupiter.api.BeforeAll
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.TestInstance
-import org.mockito.ArgumentMatchers.any
-import org.mockito.Mockito.`when`
-import org.springframework.beans.factory.annotation.Autowired
-import org.springframework.boot.test.mock.mockito.MockBean
-import org.springframework.context.ApplicationContext
-import org.springframework.context.annotation.Bean
-import org.springframework.context.annotation.Configuration
-import org.springframework.transaction.support.SimpleTransactionStatus
-import org.springframework.transaction.support.TransactionCallback
+import org.mockito.Mockito.mock
 import org.springframework.transaction.support.TransactionTemplate
 
 @TestInstance(TestInstance.Lifecycle.PER_CLASS)
 internal class IdempotentEventHandlerTest {
 
     companion object {
-        private val STREAM_NAME = "${IdempotentEventHandlerTest::class.java.simpleName}-1"
+        private val STREAM_NAME = "${IdempotentEventHandlerTest::class.java.simpleName}-22"
     }
 
-    @Autowired
     private lateinit var eventStore: EventStore
 
-    @Autowired
-    private lateinit var appContext: ApplicationContext
-
-    @Autowired
     private lateinit var objectMapper: ObjectMapper
 
-    @MockBean
     private lateinit var transactionTemplate: TransactionTemplate
 
-    @MockBean
-    private lateinit var idempotentEventClassifierDao: IdempotentEventClassifierDao
+    private val idempotentEventClassifierDao = mock(IdempotentEventClassifierDao::class.java)
 
     @BeforeAll
     fun setUp() {
-        `when`(transactionTemplate.execute(any<TransactionCallback<Unit>>()))
-                .thenAnswer {
-                    val first = it.arguments.first()
-                    first as TransactionCallback<Unit>
-                    first.doInTransaction(SimpleTransactionStatus())
-                }
+        eventStore = EventStoreBuilder
+                .newBuilder()
+                .singleNodeAddress("127.0.0.1", 1113)
+                .userCredentials("admin", "changeit").build()
+        objectMapper = ObjectMapper().apply {
+            disable(MapperFeature.DEFAULT_VIEW_INCLUSION)
+            disable(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES)
+            disable(SerializationFeature.WRITE_DATES_AS_TIMESTAMPS)
+            registerModule(KotlinModule())
+            registerModule(JavaTimeModule())
+        }
+
+        transactionTemplate = ExecutingTransactionTemplate()
     }
 
     @Test
@@ -63,8 +56,7 @@ internal class IdempotentEventHandlerTest {
         appendEvent(EventA(10))
         appendEvent(EventB(15))
 
-        val handler = SomeHandler()
-        appContext.autowireCapableBeanFactory.autowireBean(handler)
+        val handler = SomeHandler(idempotentEventClassifierDao, eventStore, objectMapper, transactionTemplate)
         handler.start()
     }
 
@@ -91,7 +83,12 @@ internal class IdempotentEventHandlerTest {
         }
     }
 
-    class SomeHandler() : IdempotentEventHandler(STREAM_NAME, "someGroup") {
+    class SomeHandler(
+            idempotentEventClassifierDao: IdempotentEventClassifierDao,
+            eventStore: EventStore,
+            objectMapper: ObjectMapper,
+            transactionTemplate: TransactionTemplate
+    ) : IdempotentEventHandler(STREAM_NAME, "someGroup", idempotentEventClassifierDao, eventStore, objectMapper, transactionTemplate) {
         @EventHandler
         private fun handleA(e: EventA) {
             println(e)
@@ -102,22 +99,4 @@ internal class IdempotentEventHandlerTest {
             println(e)
         }
     }
-}
-
-@Configuration
-private class TestConfig {
-    @Bean
-    fun objectMapperBean() =
-            ObjectMapper().apply {
-                disable(MapperFeature.DEFAULT_VIEW_INCLUSION)
-                disable(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES)
-                disable(SerializationFeature.WRITE_DATES_AS_TIMESTAMPS)
-                registerModule(KotlinModule())
-                registerModule(JavaTimeModule())
-            }
-
-    @Bean
-    fun eventstoreBean() =
-            EventStoreBuilder.newBuilder().singleNodeAddress("127.0.0.1", 1113).build()
-
 }
