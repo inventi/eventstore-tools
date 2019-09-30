@@ -52,7 +52,7 @@ internal class IdempotentEventHandlerTest {
     }
 
     @Test
-    fun t() {
+    fun `handle events from different packages`() {
         appendEvent(EventA(10))
         appendEvent(EventB(15))
 
