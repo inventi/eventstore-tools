@@ -39,7 +39,9 @@ internal class IdempotentEventHandlerTest {
         eventStore = EventStoreBuilder
                 .newBuilder()
                 .singleNodeAddress("127.0.0.1", 1113)
-                .userCredentials("admin", "changeit").build()
+                .userCredentials("admin", "changeit")
+                .build()
+
         objectMapper = ObjectMapper().apply {
             disable(MapperFeature.DEFAULT_VIEW_INCLUSION)
             disable(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES)
