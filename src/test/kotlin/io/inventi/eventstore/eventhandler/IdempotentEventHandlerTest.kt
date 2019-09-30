@@ -69,20 +69,6 @@ internal class IdempotentEventHandlerTest {
         eventStore.appendToStream(STREAM_NAME, -2, eventData).join()
     }
 
-    private fun createHandler(): IdempotentEventHandler {
-        return object : IdempotentEventHandler(STREAM_NAME, "someGroup", idempotentEventClassifierDao, eventStore, objectMapper, transactionTemplate) {
-            @EventHandler
-            private fun handleA(e: EventA) {
-                println(e)
-            }
-
-            @EventHandler
-            private fun handleB(e: EventB) {
-                println(e)
-            }
-        }
-    }
-
     class SomeHandler(
             idempotentEventClassifierDao: IdempotentEventClassifierDao,
             eventStore: EventStore,
