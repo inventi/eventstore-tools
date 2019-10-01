@@ -39,6 +39,19 @@ abstract class IdempotentEventHandler(
         private val logger by LoggerDelegate()
     }
 
+    constructor(streamName: String,
+                groupName: String,
+                idempotentEventClassifierDao: IdempotentEventClassifierDao,
+                eventStore: EventStore,
+                objectMapper: ObjectMapper,
+                transactionTemplate: TransactionTemplate) : this(streamName, groupName) {
+
+        this.idempotentEventClassifierDao = idempotentEventClassifierDao
+        this.eventStore = eventStore
+        this.objectMapper = objectMapper
+        this.transactionTemplate = transactionTemplate
+    }
+
     @field:Value("\${spring.flyway.placeholders.idempotency}")
     lateinit var tableName: String
 
@@ -62,7 +75,7 @@ abstract class IdempotentEventHandler(
         val persistentSubscription = object : PersistentSubscriptionListener {
 
             override fun onClose(subscription: PersistentSubscription?, reason: SubscriptionDropReason, exception: Exception?) {
-                logger.warn("Subscription StreamName: $streamName GroupName: $groupName was closed. Reason: $reason")
+                logger.warn("Subscription StreamName: $streamName GroupName: $groupName was closed. Reason: $reason", exception)
                 when {
                     exception is EventStoreException -> {
                         logger.warn("Eventstore connection lost: ${exception.message}")
@@ -74,7 +87,7 @@ abstract class IdempotentEventHandler(
                         eventStore.subscribeToPersistent(streamName, groupName, this)
                     }
                     exception != null -> {
-                        throw exception
+                        throw RuntimeException(exception)
                     }
                 }
             }
@@ -104,7 +117,7 @@ abstract class IdempotentEventHandler(
                             subscription.acknowledge(eventMessage)
                             return@execute
                         }
-                        throw e
+                        throw RuntimeException(e)
                     }
 
                     this@IdempotentEventHandler::class.java
@@ -136,8 +149,9 @@ abstract class IdempotentEventHandler(
                             "eventType: ${event.eventType}, " +
                             "streamName: $streamName, " +
                             "groupName: $groupName, " +
-                            "eventData: \n${String(event.data)}")
-                    throw e
+                            "eventData: \n${String(event.data)}",
+                            e)
+                    throw RuntimeException(e)
                 }
             }
 
