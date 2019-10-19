@@ -43,16 +43,16 @@ interface IdempotentEventClassifierDao : SqlObject {
             group_name,
             event_type,
             event_stream_id,
-            created_at,
+            created_at
         )
         VALUES 
         (
             :eventId,
-            :streamName
-            :groupName
+            :streamName,
+            :groupName,
             :eventType,
             :eventStreamId,
-            :createdAt,
+            :createdAt
         )
             """
         handle.createUpdate(insertQuery)
