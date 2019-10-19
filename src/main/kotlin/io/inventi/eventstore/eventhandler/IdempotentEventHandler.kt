@@ -108,6 +108,7 @@ abstract class IdempotentEventHandler(
                                 eventId = event.eventId.toString(),
                                 eventType = event.eventType,
                                 streamName = streamName,
+                                eventStreamId = event.eventStreamId,
                                 groupName = groupName
                         )
                         saveEventId(idempotentEventRecord)
@@ -148,6 +149,7 @@ abstract class IdempotentEventHandler(
                             "eventId: ${event.eventId}, " +
                             "eventType: ${event.eventType}, " +
                             "streamName: $streamName, " +
+                            "eventStreamId: ${event.eventStreamId}, " +
                             "groupName: $groupName, " +
                             "eventData: \n${String(event.data)}",
                             e)
