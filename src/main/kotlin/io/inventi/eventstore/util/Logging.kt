@@ -17,6 +17,6 @@ fun <T : Any> getClassForLogging(javaClass: Class<T>): Class<*> {
  * @see <a href="https://www.baeldung.com/kotlin-logging">link</a>
  */
 class LoggerDelegate<in R : Any> : ReadOnlyProperty<R, Logger> {
-    override fun getValue(thisRef: R, property: KProperty<*>) =
+    override fun getValue(thisRef: R, property: KProperty<*>): Logger =
             LoggerFactory.getLogger(getClassForLogging(thisRef.javaClass))
 }
