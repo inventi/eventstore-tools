@@ -43,6 +43,7 @@ interface IdempotentEventClassifierDao : SqlObject {
             group_name,
             event_type,
             event_stream_id,
+            idempotency_classifier,
             created_at
         )
         VALUES 
@@ -52,6 +53,7 @@ interface IdempotentEventClassifierDao : SqlObject {
             :groupName,
             :eventType,
             :eventStreamId,
+            :idempotencyClassifier,
             :createdAt
         )
             """
