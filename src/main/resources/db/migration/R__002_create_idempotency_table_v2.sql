@@ -19,9 +19,13 @@ SELECT event_id,
        'UNKNOWN'                                                 as event_stream_id,
        idempotency_classifier,
        created_at
-FROM ${idempotency};
+FROM ${idempotency}
+WHERE NOT EXISTS (SELECT * FROM ${idempotency}_v2);
 
-CREATE UNIQUE INDEX idx_${idempotency}_v2_unique_idempotency_classifier ON ${idempotency}_v2 (event_id, idempotency_classifier);
+CREATE UNIQUE INDEX IF NOT EXISTS idx_${idempotency}_v2_unique_idempotency_classifier ON ${idempotency}_v2 (event_id, idempotency_classifier);
+
+ALTER TABLE ${idempotency}
+    DROP CONSTRAINT IF EXISTS fk_v2_event_id;
 
 ALTER TABLE ${idempotency}
     ADD CONSTRAINT fk_v2_event_id FOREIGN KEY (event_id, idempotency_classifier) REFERENCES ${idempotency}_v2 (event_id, idempotency_classifier)
