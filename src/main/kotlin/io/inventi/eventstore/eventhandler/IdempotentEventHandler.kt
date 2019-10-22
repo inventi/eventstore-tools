@@ -203,24 +203,32 @@ abstract class IdempotentEventHandler(
         val subject = "Persistent stream for '$streamName' with groupName '$groupName'"
 
         try {
-            logger.info("Ensuring Persistent stream for $streamName with groupName $groupName")
-            val status = eventStore
-                    .createPersistentSubscription(streamName, groupName, settings)
-                    .join().status
-            if (status == PersistentSubscriptionCreateStatus.Failure) {
-                throw IllegalStateException("Failed to ensure PersistentSubscription")
-            }
+            createSubscription(subject, settings)
         } catch (e: CompletionException) {
-            if ("already exists" in (e.cause?.message ?: "")) {
-                logger.info("$subject already exists. Updating")
-                eventStore
-                        .updatePersistentSubscription(streamName, groupName, settings)
-                        .join()
+            if ("already exists" in (e.cause?.message.orEmpty())) {
+                updateSubscription(subject, settings)
             } else {
                 logger.error("Error when ensuring $subject", e)
                 throw e
             }
         }
+    }
+
+    private fun createSubscription(subject: String, settings: PersistentSubscriptionSettings?) {
+        logger.info("Ensuring $subject")
+        val status = eventStore
+                .createPersistentSubscription(streamName, groupName, settings)
+                .join().status
+        if (status == PersistentSubscriptionCreateStatus.Failure) {
+            throw IllegalStateException("Failed to ensure PersistentSubscription")
+        }
+    }
+
+    private fun updateSubscription(subject: String, settings: PersistentSubscriptionSettings?) {
+        logger.info("$subject already exists. Updating")
+        eventStore
+                .updatePersistentSubscription(streamName, groupName, settings)
+                .join()
     }
 
 
