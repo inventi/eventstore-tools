@@ -36,21 +36,9 @@ abstract class IdempotentEventHandler(
                 SubscriptionDropReason.SubscribingError,
                 SubscriptionDropReason.CatchUpError
         )
-        private val logger by LoggerDelegate()
     }
 
-    constructor(streamName: String,
-                groupName: String,
-                idempotentEventClassifierDao: IdempotentEventClassifierDao,
-                eventStore: EventStore,
-                objectMapper: ObjectMapper,
-                transactionTemplate: TransactionTemplate) : this(streamName, groupName) {
-
-        this.idempotentEventClassifierDao = idempotentEventClassifierDao
-        this.eventStore = eventStore
-        this.objectMapper = objectMapper
-        this.transactionTemplate = transactionTemplate
-    }
+    private val logger by LoggerDelegate()
 
     @field:Value("\${spring.flyway.placeholders.idempotency}")
     lateinit var tableName: String
@@ -68,6 +56,21 @@ abstract class IdempotentEventHandler(
     private lateinit var transactionTemplate: TransactionTemplate
 
     private var running: Boolean = false
+
+    constructor(
+            streamName: String,
+            groupName: String,
+            idempotentEventClassifierDao: IdempotentEventClassifierDao,
+            eventStore: EventStore,
+            objectMapper: ObjectMapper,
+            transactionTemplate: TransactionTemplate
+    ) : this(streamName, groupName) {
+
+        this.idempotentEventClassifierDao = idempotentEventClassifierDao
+        this.eventStore = eventStore
+        this.objectMapper = objectMapper
+        this.transactionTemplate = transactionTemplate
+    }
 
     override fun start() {
         ensureSubscription()
@@ -108,6 +111,7 @@ abstract class IdempotentEventHandler(
                                 eventId = event.eventId.toString(),
                                 eventType = event.eventType,
                                 streamName = streamName,
+                                eventStreamId = event.eventStreamId,
                                 groupName = groupName
                         )
                         saveEventId(idempotentEventRecord)
@@ -148,6 +152,7 @@ abstract class IdempotentEventHandler(
                             "eventId: ${event.eventId}, " +
                             "eventType: ${event.eventType}, " +
                             "streamName: $streamName, " +
+                            "eventStreamId: ${event.eventStreamId}, " +
                             "groupName: $groupName, " +
                             "eventData: \n${String(event.data)}",
                             e)
