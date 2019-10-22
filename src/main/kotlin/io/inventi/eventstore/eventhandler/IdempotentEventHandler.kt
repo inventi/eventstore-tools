@@ -26,8 +26,8 @@ import java.util.concurrent.CompletionException
 
 
 abstract class IdempotentEventHandler(
-        private val streamName: String,
-        private val groupName: String
+        val streamName: String,
+        val groupName: String
 ) : SmartLifecycle {
     companion object {
         private val RECOVERABLE_SUBSCRIPTION_DROP_REASONS = setOf(
