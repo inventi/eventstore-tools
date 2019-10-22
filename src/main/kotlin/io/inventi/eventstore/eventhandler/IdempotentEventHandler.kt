@@ -12,6 +12,7 @@ import com.github.msemys.esjc.RetryableResolvedEvent
 import com.github.msemys.esjc.SubscriptionDropReason
 import com.github.msemys.esjc.system.SystemConsumerStrategy
 import io.inventi.eventstore.eventhandler.annotation.EventHandler
+import io.inventi.eventstore.eventhandler.config.SubscriptionProperties
 import io.inventi.eventstore.eventhandler.exception.UnsupportedMethodException
 import io.inventi.eventstore.eventhandler.model.IdempotentEventClassifierRecord
 import io.inventi.eventstore.eventhandler.model.MethodParametersType
@@ -54,6 +55,9 @@ abstract class IdempotentEventHandler(
 
     @Autowired
     private lateinit var transactionTemplate: TransactionTemplate
+
+    @Autowired
+    private var subscriptionProperties: SubscriptionProperties = SubscriptionProperties()
 
     private var running: Boolean = false
 
@@ -225,11 +229,13 @@ abstract class IdempotentEventHandler(
     }
 
     private fun updateSubscription(subject: String, settings: PersistentSubscriptionSettings?) {
-        logger.info("$subject already exists. Updating")
-        eventStore
-                .updatePersistentSubscription(streamName, groupName, settings)
-                .join()
+        if (subscriptionProperties.updateEnabled) {
+            logger.info("$subject already exists. Updating")
+            eventStore
+                    .updatePersistentSubscription(streamName, groupName, settings)
+                    .join()
+        } else {
+            logger.info("$subject already exists. Updates disabled, doing nothing")
+        }
     }
-
-
 }

@@ -19,7 +19,6 @@ import org.springframework.web.client.postForObject
 import org.springframework.web.util.UriComponentsBuilder.fromUriString
 import java.io.File
 import java.net.URL
-import javax.validation.constraints.NotEmpty
 
 
 @ConfigurationProperties("eventstore")
@@ -36,7 +35,6 @@ class EventStoreInitConfig {
     var port: Int = 0
 }
 
-
 class ProjectionsProperties {
 
     var enabled: Boolean = true
@@ -47,8 +45,10 @@ class ProjectionsProperties {
 }
 
 @Component
-class ProjectionInit(private val builder: RestTemplateBuilder,
-                     private val eventstore: EventStoreInitConfig) {
+class ProjectionInit(
+        private val builder: RestTemplateBuilder,
+        private val eventstore: EventStoreInitConfig
+) {
 
     val version_prefix = "//version:"
 
