@@ -2,14 +2,14 @@ package io.inventi.eventstore.eventhandler.config
 
 import com.github.msemys.esjc.EventStoreBuilder
 import io.inventi.eventstore.EventStoreInitConfig
-import io.inventi.eventstore.eventhandler.annotation.SubscriptionsEnabled
+import io.inventi.eventstore.eventhandler.annotation.ConditionalOnSubscriptionsEnabled
 import org.springframework.boot.context.properties.ConfigurationProperties
 import org.springframework.context.annotation.Bean
 import org.springframework.context.annotation.Configuration
 import org.springframework.stereotype.Component
 import java.net.InetSocketAddress
 
-@SubscriptionsEnabled
+@ConditionalOnSubscriptionsEnabled
 @Configuration
 class EventStoreConfig {
     @Bean

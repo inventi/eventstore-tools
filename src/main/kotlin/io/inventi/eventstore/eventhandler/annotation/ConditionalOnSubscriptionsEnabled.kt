@@ -4,4 +4,4 @@ import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty
 
 
 @ConditionalOnProperty("eventstore.subscriptions.enabled")
-annotation class SubscriptionsEnabled
+annotation class ConditionalOnSubscriptionsEnabled
