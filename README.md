@@ -20,3 +20,17 @@ Below is possible configuration options:
       overwriteWithoutVersion: true #update if projection has no version tag
       failOnError: true #fail or continue on unknown error during the update process
 ```
+
+## IdempotentEventHandler
+
+IdempotentEventHandler uses [PersistentSubscriptions](https://eventstore.org/docs/dotnet-api/competing-consumers/index.html#persistent-subscription-settings). 
+Updates to `PersistentSubscription` are supported, yet disabled by default.
+If a subscription settings are updated, all current consumers are dropped.
+
+To enable forced updates, set `eventstore.subscriptions.updateEnable` to true:
+
+```yaml
+eventstore:
+  subscriptions:
+    updateEnabled: true
+```
