@@ -12,6 +12,7 @@ import com.github.msemys.esjc.RetryableResolvedEvent
 import com.github.msemys.esjc.SubscriptionDropReason
 import com.github.msemys.esjc.system.SystemConsumerStrategy
 import io.inventi.eventstore.eventhandler.annotation.EventHandler
+import io.inventi.eventstore.eventhandler.config.SubscriptionProperties
 import io.inventi.eventstore.eventhandler.exception.UnsupportedMethodException
 import io.inventi.eventstore.eventhandler.model.IdempotentEventClassifierRecord
 import io.inventi.eventstore.eventhandler.model.MethodParametersType
@@ -54,6 +55,9 @@ abstract class IdempotentEventHandler(
 
     @Autowired
     private lateinit var transactionTemplate: TransactionTemplate
+
+    @Autowired
+    private var subscriptionProperties: SubscriptionProperties = SubscriptionProperties()
 
     private var running: Boolean = false
 
@@ -203,19 +207,10 @@ abstract class IdempotentEventHandler(
         val subject = "Persistent stream for '$streamName' with groupName '$groupName'"
 
         try {
-            logger.info("Ensuring Persistent stream for $streamName with groupName $groupName")
-            val status = eventStore
-                    .createPersistentSubscription(streamName, groupName, settings)
-                    .join().status
-            if (status == PersistentSubscriptionCreateStatus.Failure) {
-                throw IllegalStateException("Failed to ensure PersistentSubscription")
-            }
+            createSubscription(subject, settings)
         } catch (e: CompletionException) {
-            if ("already exists" in (e.cause?.message ?: "")) {
-                logger.info("$subject already exists. Updating")
-                eventStore
-                        .updatePersistentSubscription(streamName, groupName, settings)
-                        .join()
+            if ("already exists" in (e.cause?.message.orEmpty())) {
+                updateSubscription(subject, settings)
             } else {
                 logger.error("Error when ensuring $subject", e)
                 throw e
@@ -223,5 +218,24 @@ abstract class IdempotentEventHandler(
         }
     }
 
+    private fun createSubscription(subject: String, settings: PersistentSubscriptionSettings?) {
+        logger.info("Ensuring $subject")
+        val status = eventStore
+                .createPersistentSubscription(streamName, groupName, settings)
+                .join().status
+        if (status == PersistentSubscriptionCreateStatus.Failure) {
+            throw IllegalStateException("Failed to ensure PersistentSubscription")
+        }
+    }
 
+    private fun updateSubscription(subject: String, settings: PersistentSubscriptionSettings?) {
+        if (subscriptionProperties.updateEnabled) {
+            logger.info("$subject already exists. Updating")
+            eventStore
+                    .updatePersistentSubscription(streamName, groupName, settings)
+                    .join()
+        } else {
+            logger.info("$subject already exists. Updates disabled, doing nothing")
+        }
+    }
 }
