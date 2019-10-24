@@ -2,8 +2,10 @@ package io.inventi.eventstore.eventhandler.web.internal.v1
 
 import io.inventi.eventstore.eventhandler.IdempotentEventClassifierDao
 import io.inventi.eventstore.eventhandler.IdempotentEventHandler
+import io.inventi.eventstore.eventhandler.annotation.ConditionalOnSubscriptionsEnabled
 import io.inventi.eventstore.eventhandler.model.IdempotentEventClassifierRecord
 import io.inventi.eventstore.util.IdConverter
+import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.http.HttpStatus
 import org.springframework.http.ResponseEntity
 import org.springframework.web.bind.annotation.GetMapping
@@ -16,8 +18,9 @@ import org.springframework.web.bind.annotation.RestController
 
 @RestController
 @RequestMapping("/internal/v1/idempotent-event-handlers")
+@ConditionalOnSubscriptionsEnabled
 class EventHandlersManagement(
-        final val eventHandlers: List<IdempotentEventHandler>,
+        final val eventHandlers: List<IdempotentEventHandler> = emptyList(),
         val idempotentEventClassifierDao: IdempotentEventClassifierDao
 ) {
     val handlerNames = eventHandlers.map { it::class.simpleName }

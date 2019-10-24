@@ -11,6 +11,7 @@ import com.github.msemys.esjc.RecordedEvent
 import com.github.msemys.esjc.RetryableResolvedEvent
 import com.github.msemys.esjc.SubscriptionDropReason
 import com.github.msemys.esjc.system.SystemConsumerStrategy
+import io.inventi.eventstore.eventhandler.annotation.ConditionalOnSubscriptionsEnabled
 import io.inventi.eventstore.eventhandler.annotation.EventHandler
 import io.inventi.eventstore.eventhandler.config.SubscriptionProperties
 import io.inventi.eventstore.eventhandler.exception.UnsupportedMethodException
@@ -26,6 +27,7 @@ import java.lang.reflect.Method
 import java.util.concurrent.CompletionException
 
 
+@ConditionalOnSubscriptionsEnabled
 abstract class IdempotentEventHandler(
         val streamName: String,
         val groupName: String
