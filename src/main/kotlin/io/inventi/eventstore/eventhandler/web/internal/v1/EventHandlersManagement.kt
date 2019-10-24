@@ -65,6 +65,6 @@ data class SkipEventRequest(
         val eventType: String
 ) {
     val eventId =
-            this.csharpEventId
-                    ?: this.javaEventId?.let { IdConverter.guidToUuid(it) }
+            this.javaEventId
+                    ?: this.csharpEventId?.let { IdConverter.guidToUuid(it) }
 }
