@@ -8,8 +8,8 @@ interface IdempotentEventClassifierDao : SqlObject {
 
     @Transaction
     fun insert(tableName: String, idempotentEventClassifierRecord: IdempotentEventClassifierRecord) {
-        insert_v1(tableName, idempotentEventClassifierRecord)
         insert_v2(tableName, idempotentEventClassifierRecord)
+        insert_v1(tableName, idempotentEventClassifierRecord)
     }
 
     private fun insert_v1(tableName: String, idempotentEventClassifierRecord: IdempotentEventClassifierRecord) {
