@@ -34,3 +34,29 @@ eventstore:
   subscriptions:
     updateEnabled: true
 ```
+
+### Skipping an event
+
+One can skip an event for specific event handler.
+
+#### Listing event handlers
+
+```bash
+curl http://<HOST>:8080/internal/v1/idempotent-event-handlers/
+
+["Handler1","Handler2","Handler3","Handler3","Handler5"]
+```
+
+#### Skipping an event
+
+One can provide either JAVA UUID (obtained from ESJC - ES Java Client) or C# GUID (obtained from EventStore)
+
+- Java
+```bash
+curl <HOST>:8080/internal/v1/idempotent-event-handlers/<HANDLER>/skip-event -XPOST -d '{"javaEventId": "<EVENT_ID>", "eventType": "<EVENT_TYPE>"}' -H content-type:application/json
+```
+
+- C#
+```bash
+curl <HOST>:8080/internal/v1/idempotent-event-handlers/<HANDLER>/skip-event -XPOST -d '{"csharpEventId": "<EVENT_ID>", "eventType": "<EVENT_TYPE>"}' -H content-type:application/json
+```
