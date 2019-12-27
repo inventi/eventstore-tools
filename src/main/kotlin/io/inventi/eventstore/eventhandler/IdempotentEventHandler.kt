@@ -8,6 +8,7 @@ import com.github.msemys.esjc.PersistentSubscriptionCreateStatus
 import com.github.msemys.esjc.PersistentSubscriptionListener
 import com.github.msemys.esjc.PersistentSubscriptionSettings
 import com.github.msemys.esjc.RecordedEvent
+import com.github.msemys.esjc.ResolvedEvent
 import com.github.msemys.esjc.RetryableResolvedEvent
 import com.github.msemys.esjc.SubscriptionDropReason
 import com.github.msemys.esjc.system.SystemConsumerStrategy
@@ -145,7 +146,7 @@ abstract class IdempotentEventHandler(
                     val eventHandlerMethods = this@IdempotentEventHandler::class.java
                             .methods.filter { it.isAnnotationPresent(EventHandler::class.java) }
 
-                    if (!shouldSkip(event, firstEventNumberToHandle)) {
+                    if (!shouldSkip(eventMessage, firstEventNumberToHandle)) {
                         eventHandlerMethods
                                 .forEach { handleMethod(it, event) }
                     } else {
@@ -210,8 +211,10 @@ abstract class IdempotentEventHandler(
         running = true
     }
 
-    private fun shouldSkip(event: RecordedEvent, firstEventNumberToHandle: Long) =
-            event.eventNumber < firstEventNumberToHandle
+    private fun shouldSkip(resolvedEvent: ResolvedEvent, firstEventNumberToHandle: Long): Boolean {
+        val eventNumber = resolvedEvent.link?.eventNumber ?: resolvedEvent.event.eventNumber
+        return eventNumber < firstEventNumberToHandle
+    }
 
     override fun stop() {
         running = false
