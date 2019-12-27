@@ -18,6 +18,7 @@ import io.inventi.eventstore.eventhandler.exception.UnsupportedMethodException
 import io.inventi.eventstore.eventhandler.model.IdempotentEventClassifierRecord
 import io.inventi.eventstore.eventhandler.model.MethodParametersType
 import io.inventi.eventstore.util.LoggerDelegate
+import org.flywaydb.core.Flyway
 import org.jdbi.v3.core.statement.UnableToExecuteStatementException
 import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.beans.factory.annotation.Value
@@ -62,6 +63,11 @@ abstract class IdempotentEventHandler(
 
     @Autowired
     private var subscriptionProperties: SubscriptionProperties = SubscriptionProperties()
+
+    @Autowired
+    @Suppress("UNUSED")
+    // We should make sure we start AFTER flyway has done it's job
+    private lateinit var flyway: Flyway
 
     private var running: Boolean = false
 
