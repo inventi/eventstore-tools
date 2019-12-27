@@ -30,7 +30,8 @@ import java.util.concurrent.CompletionException
 @ConditionalOnSubscriptionsEnabled
 abstract class IdempotentEventHandler(
         val streamName: String,
-        val groupName: String
+        val groupName: String,
+        private val initialPosition: InitialPosition = InitialPosition.FromBeginning()
 ) : SmartLifecycle {
     companion object {
         private val RECOVERABLE_SUBSCRIPTION_DROP_REASONS = setOf(
@@ -41,6 +42,7 @@ abstract class IdempotentEventHandler(
         )
     }
 
+
     private val logger by LoggerDelegate()
 
     @field:Value("\${spring.flyway.placeholders.idempotency}")
@@ -50,10 +52,10 @@ abstract class IdempotentEventHandler(
     private lateinit var idempotentEventClassifierDao: IdempotentEventClassifierDao
 
     @Autowired
-    private lateinit var eventStore: EventStore
+    protected lateinit var eventStore: EventStore
 
     @Autowired
-    private lateinit var objectMapper: ObjectMapper
+    protected lateinit var objectMapper: ObjectMapper
 
     @Autowired
     private lateinit var transactionTemplate: TransactionTemplate
@@ -62,6 +64,8 @@ abstract class IdempotentEventHandler(
     private var subscriptionProperties: SubscriptionProperties = SubscriptionProperties()
 
     private var running: Boolean = false
+
+    private var firstEventNumberToHandle: Long = -1
 
     constructor(
             streamName: String,
@@ -80,6 +84,8 @@ abstract class IdempotentEventHandler(
 
     override fun start() {
         ensureSubscription()
+
+        firstEventNumberToHandle = initialPosition.getFirstEventNumberToHandle(eventStore, objectMapper)
 
         val persistentSubscription = object : PersistentSubscriptionListener {
 
@@ -130,9 +136,17 @@ abstract class IdempotentEventHandler(
                         throw RuntimeException(e)
                     }
 
-                    this@IdempotentEventHandler::class.java
+                    val eventHandlerMethods = this@IdempotentEventHandler::class.java
                             .methods.filter { it.isAnnotationPresent(EventHandler::class.java) }
-                            .forEach { handleMethod(it, event) }
+
+                    if (!shouldSkip(event, firstEventNumberToHandle)) {
+                        eventHandlerMethods
+                                .forEach { handleMethod(it, event) }
+                    } else {
+                        eventHandlerMethods
+                                .filter { !it.getAnnotation(EventHandler::class.java).skipWhenReplaying }
+                                .forEach { handleMethod(it, event) }
+                    }
                     subscription.acknowledge(eventMessage)
                 }
             }
@@ -189,6 +203,9 @@ abstract class IdempotentEventHandler(
         eventStore.subscribeToPersistent(streamName, groupName, persistentSubscription)
         running = true
     }
+
+    private fun shouldSkip(event: RecordedEvent, firstEventNumberToHandle: Long) =
+            event.eventNumber < firstEventNumberToHandle
 
     override fun stop() {
         running = false
