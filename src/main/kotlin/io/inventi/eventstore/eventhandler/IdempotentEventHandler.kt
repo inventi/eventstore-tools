@@ -72,7 +72,9 @@ abstract class IdempotentEventHandler(
 
     private var running: Boolean = false
 
-    private var firstEventNumberToHandle: Long = -1
+    private val firstEventNumberToHandle: Long by lazy {
+        initialPosition.getFirstEventNumberToHandle(eventStore, objectMapper)
+    }
 
     constructor(
             streamName: String,
@@ -92,7 +94,6 @@ abstract class IdempotentEventHandler(
     override fun start() {
         ensureSubscription()
 
-        firstEventNumberToHandle = initialPosition.getFirstEventNumberToHandle(eventStore, objectMapper)
 
         val persistentSubscription = object : PersistentSubscriptionListener {
 
