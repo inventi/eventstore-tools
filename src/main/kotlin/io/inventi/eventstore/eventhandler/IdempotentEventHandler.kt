@@ -8,6 +8,7 @@ import com.github.msemys.esjc.PersistentSubscriptionCreateStatus
 import com.github.msemys.esjc.PersistentSubscriptionListener
 import com.github.msemys.esjc.PersistentSubscriptionSettings
 import com.github.msemys.esjc.RecordedEvent
+import com.github.msemys.esjc.ResolvedEvent
 import com.github.msemys.esjc.RetryableResolvedEvent
 import com.github.msemys.esjc.SubscriptionDropReason
 import com.github.msemys.esjc.system.SystemConsumerStrategy
@@ -18,6 +19,7 @@ import io.inventi.eventstore.eventhandler.exception.UnsupportedMethodException
 import io.inventi.eventstore.eventhandler.model.IdempotentEventClassifierRecord
 import io.inventi.eventstore.eventhandler.model.MethodParametersType
 import io.inventi.eventstore.util.LoggerDelegate
+import org.flywaydb.core.Flyway
 import org.jdbi.v3.core.statement.UnableToExecuteStatementException
 import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.beans.factory.annotation.Value
@@ -30,7 +32,8 @@ import java.util.concurrent.CompletionException
 @ConditionalOnSubscriptionsEnabled
 abstract class IdempotentEventHandler(
         val streamName: String,
-        val groupName: String
+        val groupName: String,
+        private val initialPosition: InitialPosition = InitialPosition.FromBeginning()
 ) : SmartLifecycle {
     companion object {
         private val RECOVERABLE_SUBSCRIPTION_DROP_REASONS = setOf(
@@ -41,6 +44,7 @@ abstract class IdempotentEventHandler(
         )
     }
 
+
     private val logger by LoggerDelegate()
 
     @field:Value("\${spring.flyway.placeholders.idempotency}")
@@ -50,10 +54,10 @@ abstract class IdempotentEventHandler(
     private lateinit var idempotentEventClassifierDao: IdempotentEventClassifierDao
 
     @Autowired
-    private lateinit var eventStore: EventStore
+    protected lateinit var eventStore: EventStore
 
     @Autowired
-    private lateinit var objectMapper: ObjectMapper
+    protected lateinit var objectMapper: ObjectMapper
 
     @Autowired
     private lateinit var transactionTemplate: TransactionTemplate
@@ -61,7 +65,16 @@ abstract class IdempotentEventHandler(
     @Autowired
     private var subscriptionProperties: SubscriptionProperties = SubscriptionProperties()
 
+    @Autowired
+    @Suppress("UNUSED")
+    // We should make sure we start AFTER flyway has done it's job
+    private lateinit var flyway: Flyway
+
     private var running: Boolean = false
+
+    private val firstEventNumberToHandle: Long by lazy {
+        initialPosition.getFirstEventNumberToHandle(eventStore, objectMapper)
+    }
 
     constructor(
             streamName: String,
@@ -80,6 +93,7 @@ abstract class IdempotentEventHandler(
 
     override fun start() {
         ensureSubscription()
+
 
         val persistentSubscription = object : PersistentSubscriptionListener {
 
@@ -130,9 +144,17 @@ abstract class IdempotentEventHandler(
                         throw RuntimeException(e)
                     }
 
-                    this@IdempotentEventHandler::class.java
+                    val eventHandlerMethods = this@IdempotentEventHandler::class.java
                             .methods.filter { it.isAnnotationPresent(EventHandler::class.java) }
-                            .forEach { handleMethod(it, event) }
+
+                    if (!shouldSkip(eventMessage, firstEventNumberToHandle)) {
+                        eventHandlerMethods
+                                .forEach { handleMethod(it, event) }
+                    } else {
+                        eventHandlerMethods
+                                .filter { !it.getAnnotation(EventHandler::class.java).skipWhenReplaying }
+                                .forEach { handleMethod(it, event) }
+                    }
                     subscription.acknowledge(eventMessage)
                 }
             }
@@ -188,6 +210,11 @@ abstract class IdempotentEventHandler(
 
         eventStore.subscribeToPersistent(streamName, groupName, persistentSubscription)
         running = true
+    }
+
+    private fun shouldSkip(resolvedEvent: ResolvedEvent, firstEventNumberToHandle: Long): Boolean {
+        val eventNumber = resolvedEvent.link?.eventNumber ?: resolvedEvent.event.eventNumber
+        return eventNumber < firstEventNumberToHandle
     }
 
     override fun stop() {
