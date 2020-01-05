@@ -1,0 +1,49 @@
+package io.inventi.eventstore.publisher
+
+import com.fasterxml.jackson.databind.ObjectMapper
+import com.github.msemys.esjc.EventData
+import com.github.msemys.esjc.EventStore
+import com.github.msemys.esjc.ExpectedVersion
+import io.inventi.eventstore.util.LoggerDelegate
+import org.springframework.beans.factory.annotation.Autowired
+import org.springframework.beans.factory.annotation.Value
+import org.springframework.stereotype.Service
+import kotlin.concurrent.thread
+
+/**
+ * Serializes and appends given object to configured stream in EventStore.
+ */
+@Service
+class EventPublisher {
+
+    private val logger by LoggerDelegate()
+
+    @Value("\${eventstore.eventPublisher.streamName}")
+    private lateinit var streamName: String
+
+    @Autowired
+    private lateinit var objectMapper: ObjectMapper
+
+    @Autowired
+    private lateinit var eventStore: EventStore
+
+    fun <T> publish(eventType: String, eventData: T) : Unit {
+        thread() {
+            addEventToStream(eventType, eventData)
+        }
+    }
+
+    private fun <T> addEventToStream(eventType: String, eventData: T) {
+        try {
+            eventStore.appendToStream(
+                    streamName,
+                    ExpectedVersion.ANY,
+                    EventData.newBuilder()
+                            .type(eventType)
+                            .data(objectMapper.writeValueAsString(eventData))
+                            .build())
+        } catch (e: Exception) {
+            logger.error("Failed to publish event $eventType with eventData $eventData to stream $streamName")
+        }
+    }
+}
