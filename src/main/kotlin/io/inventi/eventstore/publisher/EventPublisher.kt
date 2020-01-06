@@ -8,7 +8,8 @@ import io.inventi.eventstore.util.LoggerDelegate
 import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.beans.factory.annotation.Value
 import org.springframework.stereotype.Service
-import kotlin.concurrent.thread
+import java.util.concurrent.Executors
+import java.util.concurrent.Future
 
 /**
  * Serializes and appends given object to configured stream in EventStore.
@@ -27,8 +28,10 @@ class EventPublisher {
     @Autowired
     private lateinit var eventStore: EventStore
 
-    fun <T> publish(eventType: String, eventData: T) : Unit {
-        thread() {
+    private val pool = Executors.newFixedThreadPool(2)
+
+    fun <T> publish(eventType: String, eventData: T) : Future<*> {
+        return pool.submit {
             addEventToStream(eventType, eventData)
         }
     }
@@ -43,7 +46,8 @@ class EventPublisher {
                             .data(objectMapper.writeValueAsString(eventData))
                             .build())
         } catch (e: Exception) {
-            logger.error("Failed to publish event $eventType with eventData $eventData to stream $streamName")
+            logger.error("Failed to publish event $eventType with eventData $eventData to stream ${streamName}. Ignoring exception.", e)
+            throw e;
         }
     }
 }
