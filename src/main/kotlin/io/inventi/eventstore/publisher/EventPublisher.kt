@@ -30,9 +30,9 @@ class EventPublisher {
 
     private val pool = Executors.newFixedThreadPool(2)
 
-    fun <T> publish(eventType: String, eventData: T) : Future<*> {
+    fun <T> publish(eventType: String, eventDataPrepareFn: () -> T) : Future<*> {
         return pool.submit {
-            addEventToStream(eventType, eventData)
+            addEventToStream(eventType, eventDataPrepareFn())
         }
     }
 
@@ -46,7 +46,7 @@ class EventPublisher {
                             .data(objectMapper.writeValueAsString(eventData))
                             .build())
         } catch (e: Exception) {
-            logger.error("Failed to publish event $eventType with eventData $eventData to stream ${streamName}. Ignoring exception.", e)
+            logger.error("Failed to publish '$eventType' to '$streamName' with eventData '$eventData'", e)
             throw e;
         }
     }

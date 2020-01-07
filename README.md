@@ -64,7 +64,8 @@ curl <HOST>:8080/internal/v1/idempotent-event-handlers/<HANDLER>/skip-event -XPO
 ## EventPublisher
 Serializes and appends given object to configured stream in EventStore.
 
-EventPublisher works asynchronously, and returns Future.  
+EventPublisher works asynchronously, and returns Future.
+Accepts eventType and Event data preparation lamda which should return event data to publish  
 
 To be able to use EventPublisher, set `eventstore.eventPublisher.streamName` in application config:
 
@@ -73,5 +74,4 @@ eventstore:
   eventPublisher:
     streamName: "stream-to-publish-events-to"
 ```
- 
  
