@@ -35,6 +35,22 @@ eventstore:
     updateEnabled: true
 ```
 
+### Hooks
+
+It is possible to hook into event handling. You can hook BEFORE and/or AFTER handling an event.
+You need to override `hookBeforeHandle()` and/or `hookAfterHandle()`. You will receive `Method` and `RecordedEvent` as parameters to these methods.
+In order to set user info (e.g. into MDC), handle event, and reset MDC data, you would do this in your implementation of `IdempotentEventHandler`:
+```kotlin
+    override fun hookBeforeHandle(method: Method, event: RecordedEvent) {
+        val metadata = objectMapper.readTree(event.metadata)
+        initUserInfo(metadata)
+    }
+
+    override fun hookAfterHandle(method: Method, event: RecordedEvent) {
+        clearUserInfo()
+    }
+```
+
 ### Skipping an event
 
 You can skip an event for specific event handler.
