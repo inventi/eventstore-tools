@@ -37,7 +37,7 @@ eventstore:
 
 ### Skipping an event
 
-One can skip an event for specific event handler.
+You can skip an event for specific event handler.
 
 #### Listing event handlers
 
@@ -49,7 +49,7 @@ curl http://<HOST>:8080/internal/v1/idempotent-event-handlers/
 
 #### Skipping an event
 
-One can provide either JAVA UUID (obtained from ESJC - ES Java Client) or C# GUID (obtained from EventStore)
+You must provide either JAVA UUID (obtained from ESJC - ES Java Client) or C# GUID (obtained from EventStore)
 
 - Java
 ```bash
