@@ -7,6 +7,7 @@ import com.github.msemys.esjc.ExpectedVersion
 import io.inventi.eventstore.util.LoggerDelegate
 import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.beans.factory.annotation.Value
+import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty
 import org.springframework.stereotype.Service
 import java.util.concurrent.Executors
 import java.util.concurrent.Future
@@ -15,6 +16,7 @@ import java.util.concurrent.Future
  * Serializes and appends given object to configured stream in EventStore.
  */
 @Service
+@ConditionalOnProperty("eventstore.eventPublisher.enabled", matchIfMissing = false)
 class EventPublisher {
 
     private val logger by LoggerDelegate()
