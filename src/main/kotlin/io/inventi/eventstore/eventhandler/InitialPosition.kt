@@ -23,9 +23,15 @@ sealed class InitialPosition {
             val subscriptionCheckpointStream = "\$persistentsubscription-$streamName::$groupName-checkpoint"
             val readResult = eventStore.readEvent(subscriptionCheckpointStream, StreamPosition.END, true).join()
 
-            val oldPosition = objectMapper.readValue<Long>(readResult.event.event.data)
+            val data = readResult.event?.event?.data
+            return data?.let {
+                val oldPosition: Long = objectMapper.readValue(data)
+                oldPosition + 1
+            } ?: DEFAULT_START_POSITION
+        }
 
-            return oldPosition + 1
+        companion object DEFAULTS {
+            private const val DEFAULT_START_POSITION = StreamPosition.START
         }
     }
 }
