@@ -91,8 +91,8 @@ abstract class IdempotentEventHandler(
         this.transactionTemplate = transactionTemplate
     }
 
-    protected open fun hookBeforeHandle(method: Method, event: RecordedEvent) {}
-    protected open fun hookAfterHandle(method: Method, event: RecordedEvent) {}
+    protected open fun beforeHandle(method: Method, event: RecordedEvent) {}
+    protected open fun afterHandle(method: Method, event: RecordedEvent) {}
 
     override fun start() {
         ensureSubscription()
@@ -163,11 +163,11 @@ abstract class IdempotentEventHandler(
             }
 
             private fun handleMethodWithHooks(method: Method, event: RecordedEvent) {
-                hookBeforeHandle(method, event)
+                beforeHandle(method, event)
                 try {
                     handleMethod(method, event)
                 } finally {
-                    hookAfterHandle(method, event)
+                    afterHandle(method, event)
                 }
             }
 
