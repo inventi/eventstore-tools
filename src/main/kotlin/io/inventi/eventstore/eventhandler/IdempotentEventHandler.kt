@@ -91,6 +91,9 @@ abstract class IdempotentEventHandler(
         this.transactionTemplate = transactionTemplate
     }
 
+    protected open fun beforeHandle(method: Method, event: RecordedEvent) {}
+    protected open fun afterHandle(method: Method, event: RecordedEvent) {}
+
     override fun start() {
         ensureSubscription()
 
@@ -149,18 +152,26 @@ abstract class IdempotentEventHandler(
 
                     if (!shouldSkip(eventMessage, firstEventNumberToHandle)) {
                         eventHandlerMethods
-                                .forEach { handleMethod(it, event) }
+                                .forEach { handleMethodWithHooks(it, event) }
                     } else {
                         eventHandlerMethods
                                 .filter { !it.getAnnotation(EventHandler::class.java).skipWhenReplaying }
-                                .forEach { handleMethod(it, event) }
+                                .forEach { handleMethodWithHooks(it, event) }
                     }
                     subscription.acknowledge(eventMessage)
                 }
             }
 
-            private fun handleMethod(method: Method, event: RecordedEvent) {
+            private fun handleMethodWithHooks(method: Method, event: RecordedEvent) {
+                beforeHandle(method, event)
+                try {
+                    handleMethod(method, event)
+                } finally {
+                    afterHandle(method, event)
+                }
+            }
 
+            private fun handleMethod(method: Method, event: RecordedEvent) {
                 if (method.parameters[0].type.simpleName != event.eventType) {
                     return
                 }
