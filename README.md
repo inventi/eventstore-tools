@@ -38,18 +38,8 @@ eventstore:
 ### Hooks
 
 It is possible to hook into event handling. You can hook BEFORE and/or AFTER handling an event.
-You need to override `beforeHandle()` and/or `afterHandle()`. You will receive `Method` and `RecordedEvent` as parameters to these methods.
-In order to set user info (e.g. into MDC), handle event, and reset MDC data, you would do this in your implementation of `IdempotentEventHandler`:
-```kotlin
-    override fun beforeHandle(method: Method, event: RecordedEvent) {
-        val metadata = objectMapper.readTree(event.metadata)
-        initUserInfo(metadata)
-    }
-
-    override fun afterHandle(method: Method, event: RecordedEvent) {
-        clearUserInfo()
-    }
-```
+You need to implement `io.inventi.eventstore.eventhandler.EventHandlerExtension` by overriding `beforeHandle` and/or `afterHandle` methods and pass one or more implementations as `handlerExtensions` parameter for `IdempotentEventHandler`.
+If more than one Extension is provided, `beforeHandle` is called in that order which they are provided in the array. `afterHandle`, on the other hand, is applied in reverse order.
 
 ### Skipping an event
 

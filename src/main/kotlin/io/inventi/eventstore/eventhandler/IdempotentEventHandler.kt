@@ -33,7 +33,8 @@ import java.util.concurrent.CompletionException
 abstract class IdempotentEventHandler(
         val streamName: String,
         val groupName: String,
-        private val initialPosition: InitialPosition = InitialPosition.FromBeginning()
+        private val initialPosition: InitialPosition = InitialPosition.FromBeginning(),
+        private val handlerExtensions: List<EventHandlerExtension> = emptyList()
 ) : SmartLifecycle {
     companion object {
         private val RECOVERABLE_SUBSCRIPTION_DROP_REASONS = setOf(
@@ -91,8 +92,13 @@ abstract class IdempotentEventHandler(
         this.transactionTemplate = transactionTemplate
     }
 
-    protected open fun beforeHandle(method: Method, event: RecordedEvent) {}
-    protected open fun afterHandle(method: Method, event: RecordedEvent) {}
+    private fun beforeHandle(method: Method, event: RecordedEvent) {
+        handlerExtensions.forEach { it.beforeHandle(method, event) }
+    }
+
+    private fun afterHandle(method: Method, event: RecordedEvent) {
+        handlerExtensions.asReversed().forEach { it.afterHandle(method, event) }
+    }
 
     override fun start() {
         ensureSubscription()
