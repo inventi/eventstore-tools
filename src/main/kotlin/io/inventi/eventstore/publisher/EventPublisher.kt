@@ -33,7 +33,9 @@ class EventPublisher {
     private val pool = Executors.newFixedThreadPool(2)
 
     fun <T> publish(eventType: String, eventDataSupplier: () -> T) : Future<*> {
-        return publish(eventType, eventDataSupplier())
+        return pool.submit {
+            addEventToStream(eventType, eventDataSupplier())
+        }
     }
 
     fun <T> publish(eventType: String, eventData: T) : Future<*> {
