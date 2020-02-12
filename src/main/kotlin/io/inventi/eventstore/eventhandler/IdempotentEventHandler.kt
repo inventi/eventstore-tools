@@ -24,11 +24,13 @@ import org.jdbi.v3.core.statement.UnableToExecuteStatementException
 import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.beans.factory.annotation.Value
 import org.springframework.context.SmartLifecycle
+import org.springframework.stereotype.Component
 import org.springframework.transaction.support.TransactionTemplate
 import java.lang.reflect.Method
 import java.util.concurrent.CompletionException
 
 
+@Component
 @ConditionalOnSubscriptionsEnabled
 abstract class IdempotentEventHandler(
         val streamName: String,
@@ -43,8 +45,9 @@ abstract class IdempotentEventHandler(
                 SubscriptionDropReason.SubscribingError,
                 SubscriptionDropReason.CatchUpError
         )
-    }
 
+        val OVERRIDE_EVENT_ID = "overrideEventId"
+    }
 
     private val logger by LoggerDelegate()
 
@@ -137,7 +140,7 @@ abstract class IdempotentEventHandler(
 
                     try {
                         val idempotentEventRecord = IdempotentEventClassifierRecord(
-                                eventId = event.eventId.toString(),
+                                eventId = event.effectiveEventId,
                                 eventType = event.eventType,
                                 streamName = streamName,
                                 eventStreamId = event.eventStreamId,
@@ -284,4 +287,13 @@ abstract class IdempotentEventHandler(
             logger.info("$subject already exists. Updates disabled, doing nothing")
         }
     }
+
+    private val RecordedEvent.effectiveEventId: String
+        get() {
+            val originalEventId = objectMapper.runCatching {
+                readTree(metadata).path(OVERRIDE_EVENT_ID).textValue() as String?
+            }.getOrNull()
+
+            return originalEventId ?: eventId.toString()
+        }
 }

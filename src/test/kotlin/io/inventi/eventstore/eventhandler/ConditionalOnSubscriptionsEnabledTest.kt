@@ -20,7 +20,7 @@ import org.springframework.test.context.junit4.SpringRunner
 )
 class ConditionalOnSubscriptionsEnabledTest {
     @Autowired
-    var handler: IdempotentEventHandlerTest.SomeHandler? = null
+    private var handler: IdempotentEventHandlerTest.SomeHandler? = null
 
     @Test
     fun `does not instantiate bean if eventstore subscriptions enabled is false`() {
