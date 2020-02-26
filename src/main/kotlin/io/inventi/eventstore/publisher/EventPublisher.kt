@@ -40,12 +40,6 @@ class EventPublisher {
         }
     }
 
-    fun <T> publish(eventType: String, eventDataSupplier: () -> T): Future<*> {
-        return pool.submit {
-            addEventToStream(eventType, eventDataSupplier())
-        }
-    }
-
     fun <T> publish(eventType: String, eventData: T): Future<*> {
         return pool.submit {
             addEventToStream(eventType, eventData)
