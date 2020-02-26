@@ -12,6 +12,8 @@ import org.springframework.stereotype.Service
 import java.util.concurrent.Executors
 import java.util.concurrent.Future
 
+import io.inventi.eventstore.eventhandler.model.EventData as Event
+
 /**
  * Serializes and appends given object to configured stream in EventStore.
  */
@@ -32,13 +34,13 @@ class EventPublisher {
 
     private val pool = Executors.newFixedThreadPool(2)
 
-    fun <T> publish(eventType: String, eventDataSupplier: () -> T) : Future<*> {
+    fun <T> publish(eventType: String, eventData: Event<T>): Future<*> {
         return pool.submit {
-            addEventToStream(eventType, eventDataSupplier())
+            addEventToStream(eventType, eventData)
         }
     }
 
-    fun <T> publish(eventType: String, eventData: T) : Future<*> {
+    fun <T> publish(eventType: String, eventData: T): Future<*> {
         return pool.submit {
             addEventToStream(eventType, eventData)
         }
