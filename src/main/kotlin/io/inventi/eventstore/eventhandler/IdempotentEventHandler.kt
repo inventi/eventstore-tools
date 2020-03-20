@@ -79,13 +79,15 @@ abstract class IdempotentEventHandler(
             idempotentEventClassifierDao: IdempotentEventClassifierDao,
             eventStore: EventStore,
             objectMapper: ObjectMapper,
-            transactionTemplate: TransactionTemplate
+            transactionTemplate: TransactionTemplate,
+            tableName: String
     ) : this(streamName, groupName) {
 
         this.idempotentEventClassifierDao = idempotentEventClassifierDao
         this.eventStore = eventStore
         this.objectMapper = objectMapper
         this.transactionTemplate = transactionTemplate
+        this.tableName = tableName
     }
 
     private fun beforeHandle(method: Method, event: RecordedEvent) {
