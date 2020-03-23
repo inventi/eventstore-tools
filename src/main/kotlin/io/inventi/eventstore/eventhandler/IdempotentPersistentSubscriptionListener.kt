@@ -10,12 +10,15 @@ import com.github.msemys.esjc.ResolvedEvent
 import com.github.msemys.esjc.RetryableResolvedEvent
 import com.github.msemys.esjc.SubscriptionDropReason
 import io.inventi.eventstore.eventhandler.annotation.EventHandler
+import io.inventi.eventstore.eventhandler.annotation.Retry
 import io.inventi.eventstore.eventhandler.exception.UnsupportedMethodException
 import io.inventi.eventstore.eventhandler.model.IdempotentEventClassifierRecord
 import io.inventi.eventstore.eventhandler.model.MethodParametersType
 import org.slf4j.Logger
 import org.springframework.transaction.support.TransactionTemplate
+import java.lang.reflect.InvocationTargetException
 import java.lang.reflect.Method
+import kotlin.reflect.full.isSubclassOf
 
 
 internal class IdempotentPersistentSubscriptionListener(
@@ -99,10 +102,46 @@ internal class IdempotentPersistentSubscriptionListener(
     private fun handleMethodWithHooks(method: Method, event: RecordedEvent) {
         beforeHandle(method, event)
         try {
-            handleMethod(method, event)
+            handleMethodWithPossibleRetry(method, event)
         } finally {
             afterHandle(method, event)
         }
+    }
+
+    private fun handleMethodWithPossibleRetry(method: Method, event: RecordedEvent) {
+        val retryAnnotations = method.getAnnotationsByType(Retry::class.java)
+
+        if (retryAnnotations.isNotEmpty()) {
+            handleMethodWithRetry(method, event, retryAnnotations.first())
+        } else {
+            handleMethod(method, event)
+        }
+    }
+
+    private fun handleMethodWithRetry(method: Method, event: RecordedEvent, retryAnnotation: Retry) {
+        val retryableExceptions = retryAnnotation.exceptions
+        val maxAttempts = retryAnnotation.maxAttempts
+        val backoffDelayMillis = retryAnnotation.backoffDelayMillis
+
+        var caughtRetryableException: Exception? = null
+
+        for (attempt in (maxAttempts downTo 1)) {
+            try {
+                return handleMethod(method, event)
+            } catch (e: Exception) {
+                if (retryableExceptions.any { e::class.isSubclassOf(it) }) {
+                    caughtRetryableException = e
+                    Thread.sleep(backoffDelayMillis)
+                    continue
+                }
+                throw RuntimeException(e)
+            }
+        }
+
+        if (caughtRetryableException != null)
+            if (caughtRetryableException is RuntimeException)
+                throw caughtRetryableException
+        throw RuntimeException(caughtRetryableException)
     }
 
     private fun handleMethod(method: Method, event: RecordedEvent) {
@@ -129,7 +168,10 @@ internal class IdempotentPersistentSubscriptionListener(
                     "groupName: $groupName, " +
                     "eventData: \n${String(event.data)}",
                     e)
-            throw RuntimeException(e)
+            when (e) {
+                is InvocationTargetException -> throw e.targetException
+                else -> throw e
+            }
         }
     }
 
