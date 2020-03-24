@@ -61,6 +61,8 @@ internal class IdempotentEventHandlerTest {
         val handler = SomeHandler(idempotentEventClassifierDao, eventStore, objectMapper, transactionTemplate)
         handler.start()
 
+        // handler.start() does actions asynchronously. If we don't sleep, handler's thread pool
+        // is shut down, so it does nothing.
         Thread.sleep(2000)
     }
 
