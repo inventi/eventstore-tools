@@ -132,6 +132,7 @@ internal class IdempotentPersistentSubscriptionListener(
             } catch (e: Exception) {
                 if (retryableExceptions.any { e.isAOrIsCausedBy(it) }) {
                     caughtRetryableException = e
+                    logger.debug("Caught retryable exception, will retry in $backoffDelayMillis ms: $caughtRetryableException")
                     Thread.sleep(backoffDelayMillis)
                     continue
                 }
