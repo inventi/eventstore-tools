@@ -5,7 +5,7 @@ import kotlin.reflect.KClass
 
 
 @Inherited
-@Target(AnnotationTarget.FUNCTION)
+@Target(AnnotationTarget.FUNCTION, AnnotationTarget.ANNOTATION_CLASS)
 @Retention(AnnotationRetention.RUNTIME)
 @Repeatable
 @MustBeDocumented
