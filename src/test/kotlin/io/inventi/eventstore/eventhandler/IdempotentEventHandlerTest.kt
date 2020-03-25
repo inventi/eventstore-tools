@@ -60,6 +60,10 @@ internal class IdempotentEventHandlerTest {
 
         val handler = SomeHandler(idempotentEventClassifierDao, eventStore, objectMapper, transactionTemplate)
         handler.start()
+
+        // handler.start() does actions asynchronously. If we don't sleep, handler's thread pool
+        // is shut down, so it does nothing.
+        Thread.sleep(2000)
     }
 
     private fun appendEvent(o: Any) {
@@ -76,7 +80,7 @@ internal class IdempotentEventHandlerTest {
             eventStore: EventStore,
             objectMapper: ObjectMapper,
             transactionTemplate: TransactionTemplate
-    ) : IdempotentEventHandler(STREAM_NAME, "someGroup", idempotentEventClassifierDao, eventStore, objectMapper, transactionTemplate) {
+    ) : IdempotentEventHandler(STREAM_NAME, "someGroup", idempotentEventClassifierDao, eventStore, objectMapper, transactionTemplate, "someTable") {
         @EventHandler
         private fun handleA(e: EventA) {
             println(e)

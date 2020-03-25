@@ -2,22 +2,15 @@ package io.inventi.eventstore.eventhandler
 
 import com.fasterxml.jackson.databind.ObjectMapper
 import com.github.msemys.esjc.EventStore
-import com.github.msemys.esjc.EventStoreException
-import com.github.msemys.esjc.PersistentSubscription
 import com.github.msemys.esjc.PersistentSubscriptionCreateStatus
-import com.github.msemys.esjc.PersistentSubscriptionListener
 import com.github.msemys.esjc.PersistentSubscriptionSettings
 import com.github.msemys.esjc.RecordedEvent
 import com.github.msemys.esjc.ResolvedEvent
-import com.github.msemys.esjc.RetryableResolvedEvent
 import com.github.msemys.esjc.SubscriptionDropReason
 import com.github.msemys.esjc.system.SystemConsumerStrategy
 import io.inventi.eventstore.eventhandler.annotation.ConditionalOnSubscriptionsEnabled
-import io.inventi.eventstore.eventhandler.annotation.EventHandler
 import io.inventi.eventstore.eventhandler.config.SubscriptionProperties
-import io.inventi.eventstore.eventhandler.exception.UnsupportedMethodException
 import io.inventi.eventstore.eventhandler.model.IdempotentEventClassifierRecord
-import io.inventi.eventstore.eventhandler.model.MethodParametersType
 import io.inventi.eventstore.util.LoggerDelegate
 import org.flywaydb.core.Flyway
 import org.jdbi.v3.core.statement.UnableToExecuteStatementException
@@ -86,13 +79,15 @@ abstract class IdempotentEventHandler(
             idempotentEventClassifierDao: IdempotentEventClassifierDao,
             eventStore: EventStore,
             objectMapper: ObjectMapper,
-            transactionTemplate: TransactionTemplate
+            transactionTemplate: TransactionTemplate,
+            tableName: String
     ) : this(streamName, groupName) {
 
         this.idempotentEventClassifierDao = idempotentEventClassifierDao
         this.eventStore = eventStore
         this.objectMapper = objectMapper
         this.transactionTemplate = transactionTemplate
+        this.tableName = tableName
     }
 
     private fun beforeHandle(method: Method, event: RecordedEvent) {
@@ -107,132 +102,24 @@ abstract class IdempotentEventHandler(
         ensureSubscription()
 
 
-        val persistentSubscription = object : PersistentSubscriptionListener {
-
-            override fun onClose(subscription: PersistentSubscription?, reason: SubscriptionDropReason, exception: Exception?) {
-                logger.warn("Subscription StreamName: $streamName GroupName: $groupName was closed. Reason: $reason", exception)
-                when {
-                    exception is EventStoreException -> {
-                        logger.warn("Eventstore connection lost: ${exception.message}")
-                        logger.warn("Reconnecting into StreamName: $streamName, GroupName: $groupName")
-                        eventStore.subscribeToPersistent(streamName, groupName, this)
-                    }
-                    RECOVERABLE_SUBSCRIPTION_DROP_REASONS.contains(reason) -> {
-                        logger.warn("Reconnecting into StreamName: $streamName, GroupName: $groupName")
-                        eventStore.subscribeToPersistent(streamName, groupName, this)
-                    }
-                    exception != null -> {
-                        throw RuntimeException(exception)
-                    }
-                }
-            }
-
-            override fun onEvent(subscription: PersistentSubscription, eventMessage: RetryableResolvedEvent) {
-                if (eventMessage.event == null) {
-                    logger.warn("Skipping eventMessage with empty event. Linked eventId: ${eventMessage.link.eventId}")
-                    subscription.acknowledge(eventMessage)
-                    return
-                }
-
-                transactionTemplate.execute {
-                    val event = eventMessage.event
-                    logger.trace("Received event '${event.eventType}': ${String(event.metadata)}; ${String(event.data)}")
-
-                    try {
-                        val idempotentEventRecord = IdempotentEventClassifierRecord(
-                                eventId = event.effectiveEventId,
-                                eventType = event.eventType,
-                                streamName = streamName,
-                                eventStreamId = event.eventStreamId,
-                                groupName = groupName
-                        )
-                        saveEventId(idempotentEventRecord)
-                    } catch (e: UnableToExecuteStatementException) {
-                        if ("Duplicate entry" in (e.message ?: "") || "duplicate key" in (e.message ?: "")) {
-                            logger.warn("Event already handled '${event.eventType}': ${String(event.metadata)}; ${String(event.data)}")
-                            subscription.acknowledge(eventMessage)
-                            return@execute
-                        }
-                        throw RuntimeException(e)
-                    }
-
-                    val eventHandlerMethods = this@IdempotentEventHandler::class.java
-                            .methods.filter { it.isAnnotationPresent(EventHandler::class.java) }
-
-                    if (!shouldSkip(eventMessage, firstEventNumberToHandle)) {
-                        eventHandlerMethods
-                                .forEach { handleMethodWithHooks(it, event) }
-                    } else {
-                        eventHandlerMethods
-                                .filter { !it.getAnnotation(EventHandler::class.java).skipWhenReplaying }
-                                .forEach { handleMethodWithHooks(it, event) }
-                    }
-                    subscription.acknowledge(eventMessage)
-                }
-            }
-
-            private fun handleMethodWithHooks(method: Method, event: RecordedEvent) {
-                beforeHandle(method, event)
-                try {
-                    handleMethod(method, event)
-                } finally {
-                    afterHandle(method, event)
-                }
-            }
-
-            private fun handleMethod(method: Method, event: RecordedEvent) {
-                if (method.parameters[0].type.simpleName != event.eventType) {
-                    return
-                }
-                try {
-                    val methodParametersType = extractMethodParameterTypes(method)
-
-                    val eventData = deserialize(methodParametersType.dataType, event.data)
-                    if (methodParametersType.metadataType != null) {
-                        val metadata = deserialize(methodParametersType.metadataType, event.metadata)
-                        method.invoke(this@IdempotentEventHandler, eventData, metadata)
-                        return
-                    }
-                    method.invoke(this@IdempotentEventHandler, eventData)
-
-                } catch (e: Exception) {
-                    logger.error("Failure on method invocation ${method.name}: " +
-                            "eventId: ${event.eventId}, " +
-                            "eventType: ${event.eventType}, " +
-                            "streamName: $streamName, " +
-                            "eventStreamId: ${event.eventStreamId}, " +
-                            "groupName: $groupName, " +
-                            "eventData: \n${String(event.data)}",
-                            e)
-                    throw RuntimeException(e)
-                }
-            }
-
-            private fun saveEventId(idempotentEventClassifierRecord: IdempotentEventClassifierRecord) {
-                idempotentEventClassifierDao.insert(tableName, idempotentEventClassifierRecord)
-            }
-
-            private fun deserialize(type: Class<*>, data: ByteArray): Any {
-                return objectMapper.readValue(data, type)
-            }
-
-            private fun extractMethodParameterTypes(it: Method): MethodParametersType {
-                if (it.parameterTypes.isNullOrEmpty() || it.parameterTypes.size > 2) {
-                    throw UnsupportedMethodException("Method must have 1-2 parameters")
-                }
-
-                val eventType = it.parameterTypes[0]
-                val metadataType = it.parameterTypes.getOrNull(1)
-
-                return MethodParametersType(eventType, metadataType)
-            }
-        }
+        val persistentSubscription = IdempotentPersistentSubscriptionListener(
+                handlerInstance = this,
+                streamName = streamName,
+                groupName = groupName,
+                eventStore = eventStore,
+                saveEventId = this::saveEventId,
+                shouldSkip = this::shouldSkip,
+                handlerExtensions = handlerExtensions,
+                transactionTemplate = transactionTemplate,
+                objectMapper = objectMapper,
+                logger = logger
+        )
 
         eventStore.subscribeToPersistent(streamName, groupName, persistentSubscription)
         running = true
     }
 
-    private fun shouldSkip(resolvedEvent: ResolvedEvent, firstEventNumberToHandle: Long): Boolean {
+    private fun shouldSkip(resolvedEvent: ResolvedEvent): Boolean {
         val eventNumber = resolvedEvent.link?.eventNumber ?: resolvedEvent.event.eventNumber
         return eventNumber < firstEventNumberToHandle
     }
@@ -288,12 +175,20 @@ abstract class IdempotentEventHandler(
         }
     }
 
-    private val RecordedEvent.effectiveEventId: String
-        get() {
-            val originalEventId = objectMapper.runCatching {
-                readTree(metadata).path(OVERRIDE_EVENT_ID).textValue() as String?
-            }.getOrNull()
+    private fun saveEventId(idempotentEventClassifierRecord: IdempotentEventClassifierRecord): Boolean {
+        return try {
+            idempotentEventClassifierDao.insert(tableName, idempotentEventClassifierRecord)
+            true
+        } catch (e: UnableToExecuteStatementException) {
+            if (!e.isDuplicateEntryException)
+                throw RuntimeException(e)
 
-            return originalEventId ?: eventId.toString()
+            false
+        }
+    }
+
+    private val UnableToExecuteStatementException.isDuplicateEntryException: Boolean
+        get() {
+            return "Duplicate entry" in (this.message ?: "") && "duplicate key" in (this.message ?: "")
         }
 }
