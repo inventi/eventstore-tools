@@ -18,6 +18,7 @@ import org.slf4j.Logger
 import org.springframework.transaction.support.TransactionTemplate
 import java.lang.reflect.InvocationTargetException
 import java.lang.reflect.Method
+import kotlin.reflect.KClass
 import kotlin.reflect.full.isSubclassOf
 
 
@@ -129,7 +130,7 @@ internal class IdempotentPersistentSubscriptionListener(
             try {
                 return handleMethod(method, event)
             } catch (e: Exception) {
-                if (retryableExceptions.any { e::class.isSubclassOf(it) }) {
+                if (retryableExceptions.any { e.isAOrIsCausedBy(it) }) {
                     caughtRetryableException = e
                     Thread.sleep(backoffDelayMillis)
                     continue
@@ -206,4 +207,18 @@ internal class IdempotentPersistentSubscriptionListener(
 
             return originalEventId ?: eventId.toString()
         }
+
+    private fun Exception.isAOrIsCausedBy(matchClass: KClass<*>): Boolean {
+        var exception: Throwable? = this
+        while (exception != null) {
+            if (exception::class.isSubclassOf(matchClass)) {
+                return true
+            }
+            exception = exception.cause
+        }
+
+        return false
+    }
 }
+
+
