@@ -3,8 +3,8 @@ package io.inventi.eventstore.eventhandler
 import com.github.msemys.esjc.RecordedEvent
 import java.lang.reflect.Method
 
+typealias Cleanup = (error: Throwable?) -> Unit
 
 interface EventHandlerExtension {
-    fun beforeHandle(method: Method, event: RecordedEvent) {}
-    fun afterHandle(method: Method, event: RecordedEvent) {}
+    fun handle(method: Method, event: RecordedEvent): Cleanup
 }

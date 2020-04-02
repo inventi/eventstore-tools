@@ -86,7 +86,8 @@ internal class IdempotentPersistentSubscriptionListener(
             }
 
             val eventHandlerMethods = handlerInstance::class.java
-                    .methods.filter { it.isAnnotationPresent(EventHandler::class.java) }
+                    .methods
+                    .filter { it.isEventHandlerFor(event) }
 
             if (!shouldSkip(eventMessage)) {
                 eventHandlerMethods
@@ -101,12 +102,17 @@ internal class IdempotentPersistentSubscriptionListener(
     }
 
     private fun handleMethodWithHooks(method: Method, event: RecordedEvent) {
-        beforeHandle(method, event)
+        val extensionCleanups = handlerExtensions
+                .map { it.handle(method, event) }
+                .asReversed()
+
         try {
             handleMethodWithPossibleRetry(method, event)
-        } finally {
-            afterHandle(method, event)
+        } catch (error: Throwable) {
+            extensionCleanups.forEach { cleanup -> cleanup(error) }
+            throw error
         }
+        extensionCleanups.forEach { cleanup -> cleanup(null) }
     }
 
     private fun handleMethodWithPossibleRetry(method: Method, event: RecordedEvent) {
@@ -147,9 +153,6 @@ internal class IdempotentPersistentSubscriptionListener(
     }
 
     private fun handleMethod(method: Method, event: RecordedEvent) {
-        if (method.parameters[0].type.simpleName != event.eventType) {
-            return
-        }
         try {
             val methodParametersType = extractMethodParameterTypes(method)
 
@@ -175,14 +178,6 @@ internal class IdempotentPersistentSubscriptionListener(
                 else -> throw e
             }
         }
-    }
-
-    private fun beforeHandle(method: Method, event: RecordedEvent) {
-        handlerExtensions.forEach { it.beforeHandle(method, event) }
-    }
-
-    private fun afterHandle(method: Method, event: RecordedEvent) {
-        handlerExtensions.asReversed().forEach { it.afterHandle(method, event) }
     }
 
     private fun deserialize(type: Class<*>, data: ByteArray): Any {
@@ -219,6 +214,11 @@ internal class IdempotentPersistentSubscriptionListener(
         }
 
         return false
+    }
+
+    private fun Method.isEventHandlerFor(event: RecordedEvent): Boolean {
+        return this.isAnnotationPresent(EventHandler::class.java)
+                && this.parameters[0].type.simpleName == event.eventType
     }
 }
 
