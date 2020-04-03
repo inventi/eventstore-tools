@@ -25,6 +25,7 @@ dependencies {
 	implementation 'org.jdbi:jdbi3-kotlin:3.8.0'
 	implementation 'org.jdbi:jdbi3-kotlin-sqlobject:3.8.0'
 	implementation 'org.flywaydb:flyway-core:6.0.8'
+	compileOnly 'org.springframework.cloud:spring-cloud-gcp-starter-trace:1.1.1.RELEASE'
 	testImplementation("org.springframework.boot:spring-boot-starter-test:${springBootVersion}") {
 		exclude(group: 'org.junit')
 	}

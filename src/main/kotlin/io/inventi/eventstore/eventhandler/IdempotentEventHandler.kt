@@ -4,7 +4,6 @@ import com.fasterxml.jackson.databind.ObjectMapper
 import com.github.msemys.esjc.EventStore
 import com.github.msemys.esjc.PersistentSubscriptionCreateStatus
 import com.github.msemys.esjc.PersistentSubscriptionSettings
-import com.github.msemys.esjc.RecordedEvent
 import com.github.msemys.esjc.ResolvedEvent
 import com.github.msemys.esjc.SubscriptionDropReason
 import com.github.msemys.esjc.system.SystemConsumerStrategy
@@ -19,7 +18,6 @@ import org.springframework.beans.factory.annotation.Value
 import org.springframework.context.SmartLifecycle
 import org.springframework.stereotype.Component
 import org.springframework.transaction.support.TransactionTemplate
-import java.lang.reflect.Method
 import java.util.concurrent.CompletionException
 
 
@@ -88,14 +86,6 @@ abstract class IdempotentEventHandler(
         this.objectMapper = objectMapper
         this.transactionTemplate = transactionTemplate
         this.tableName = tableName
-    }
-
-    private fun beforeHandle(method: Method, event: RecordedEvent) {
-        handlerExtensions.forEach { it.beforeHandle(method, event) }
-    }
-
-    private fun afterHandle(method: Method, event: RecordedEvent) {
-        handlerExtensions.asReversed().forEach { it.afterHandle(method, event) }
     }
 
     override fun start() {
@@ -189,6 +179,6 @@ abstract class IdempotentEventHandler(
 
     private val UnableToExecuteStatementException.isDuplicateEntryException: Boolean
         get() {
-            return "Duplicate entry" in (this.message ?: "") && "duplicate key" in (this.message ?: "")
+            return "Duplicate entry" in (this.message ?: "") || "duplicate key" in (this.message ?: "")
         }
 }
