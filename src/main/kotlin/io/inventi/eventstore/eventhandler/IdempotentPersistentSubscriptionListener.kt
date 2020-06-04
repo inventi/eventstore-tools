@@ -11,6 +11,7 @@ import com.github.msemys.esjc.RetryableResolvedEvent
 import com.github.msemys.esjc.SubscriptionDropReason
 import io.inventi.eventstore.eventhandler.annotation.EventHandler
 import io.inventi.eventstore.eventhandler.annotation.Retry
+import io.inventi.eventstore.eventhandler.exception.EventAcknowledgementFailedException
 import io.inventi.eventstore.eventhandler.exception.UnsupportedMethodException
 import io.inventi.eventstore.eventhandler.model.IdempotentEventClassifierRecord
 import io.inventi.eventstore.eventhandler.model.MethodParametersType
@@ -47,12 +48,12 @@ internal class IdempotentPersistentSubscriptionListener(
         logger.warn("Subscription StreamName: $streamName GroupName: $groupName was closed. Reason: $reason", exception)
         when {
             exception is EventStoreException -> {
-                logger.warn("Eventstore connection lost: ${exception.message}")
+                logger.warn("Eventstore connection lost: ${exception.message}", exception)
                 logger.warn("Reconnecting into StreamName: $streamName, GroupName: $groupName")
                 eventStore.subscribeToPersistent(streamName, groupName, this)
             }
             RECOVERABLE_SUBSCRIPTION_DROP_REASONS.contains(reason) -> {
-                logger.warn("Reconnecting into StreamName: $streamName, GroupName: $groupName")
+                logger.warn("Reconnecting into StreamName: $streamName, GroupName: $groupName", exception)
                 eventStore.subscribeToPersistent(streamName, groupName, this)
             }
             exception != null -> {
@@ -64,7 +65,7 @@ internal class IdempotentPersistentSubscriptionListener(
     override fun onEvent(subscription: PersistentSubscription, eventMessage: RetryableResolvedEvent) {
         if (eventMessage.event == null) {
             logger.warn("Skipping eventMessage with empty event. Linked eventId: ${eventMessage.link.eventId}")
-            subscription.acknowledge(eventMessage)
+            subscription.acknowledgeProcessedEvent(eventMessage)
             return
         }
 
@@ -97,7 +98,7 @@ internal class IdempotentPersistentSubscriptionListener(
                 logger.warn("Event already handled '${event.eventType}': ${String(event.metadata)}; ${String(event.data)}")
             }
         }
-        subscription.acknowledge(eventMessage)
+        subscription.acknowledgeProcessedEvent(eventMessage)
     }
 
     private fun handleMethodWithHooks(method: Method, event: RecordedEvent) {
@@ -218,6 +219,14 @@ internal class IdempotentPersistentSubscriptionListener(
     private fun Method.isEventHandlerFor(event: RecordedEvent): Boolean {
         return this.isAnnotationPresent(EventHandler::class.java)
                 && this.parameters[0].type.simpleName == event.eventType
+    }
+
+    private fun PersistentSubscription.acknowledgeProcessedEvent(event: ResolvedEvent) {
+        try {
+            this.acknowledge(event)
+        } catch (e: Exception) {
+            throw EventAcknowledgementFailedException("Could not acknowledge event with id: ${event.originalEvent().eventId}", e)
+        }
     }
 }
 
