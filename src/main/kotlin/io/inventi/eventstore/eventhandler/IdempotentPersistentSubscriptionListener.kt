@@ -79,26 +79,25 @@ internal class IdempotentPersistentSubscriptionListener(
                     eventStreamId = event.eventStreamId,
                     groupName = groupName
             )
-            if (!saveEventId(idempotentEventRecord)) {
-                logger.warn("Event already handled '${event.eventType}': ${String(event.metadata)}; ${String(event.data)}")
-                subscription.acknowledge(eventMessage)
-                return@execute
-            }
 
-            val eventHandlerMethods = handlerInstance::class.java
-                    .methods
-                    .filter { it.isEventHandlerFor(event) }
+            if (saveEventId(idempotentEventRecord)) {
+                val eventHandlerMethods = handlerInstance::class.java
+                        .methods
+                        .filter { it.isEventHandlerFor(event) }
 
-            if (!shouldSkip(eventMessage)) {
-                eventHandlerMethods
-                        .forEach { handleMethodWithHooks(it, event) }
+                if (!shouldSkip(eventMessage)) {
+                    eventHandlerMethods
+                            .forEach { handleMethodWithHooks(it, event) }
+                } else {
+                    eventHandlerMethods
+                            .filter { !it.getAnnotation(EventHandler::class.java).skipWhenReplaying }
+                            .forEach { handleMethodWithHooks(it, event) }
+                }
             } else {
-                eventHandlerMethods
-                        .filter { !it.getAnnotation(EventHandler::class.java).skipWhenReplaying }
-                        .forEach { handleMethodWithHooks(it, event) }
+                logger.warn("Event already handled '${event.eventType}': ${String(event.metadata)}; ${String(event.data)}")
             }
-            subscription.acknowledge(eventMessage)
         }
+        subscription.acknowledge(eventMessage)
     }
 
     private fun handleMethodWithHooks(method: Method, event: RecordedEvent) {
