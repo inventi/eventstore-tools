@@ -8,6 +8,7 @@ import org.springframework.context.annotation.Bean
 import org.springframework.context.annotation.Configuration
 import org.springframework.stereotype.Component
 import java.net.InetSocketAddress
+import java.time.Duration
 
 @ConditionalOnSubscriptionsEnabled
 @Configuration
@@ -19,7 +20,8 @@ class EventStoreConfig {
                     .persistentSubscriptionAutoAck(false)
                     .singleNodeAddress(InetSocketAddress.createUnresolved(properties.host, properties.port))
                     .userCredentials(properties.username, properties.password)
-                    .build();
+                    .heartbeatTimeout(Duration.ofMillis(properties.heartbeatTimeoutMillis))
+                    .build()
 }
 
 @Component
