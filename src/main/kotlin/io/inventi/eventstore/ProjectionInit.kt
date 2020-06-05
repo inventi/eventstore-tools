@@ -33,6 +33,7 @@ class EventStoreInitConfig {
     lateinit var host: String
     var port: Int = 0
     var heartbeatTimeoutMillis: Long = 1500
+    var operationTimeoutMillis: Long = 7000
 }
 
 class ProjectionsProperties {

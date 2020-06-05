@@ -21,6 +21,7 @@ class EventStoreConfig {
                     .singleNodeAddress(InetSocketAddress.createUnresolved(properties.host, properties.port))
                     .userCredentials(properties.username, properties.password)
                     .heartbeatTimeout(Duration.ofMillis(properties.heartbeatTimeoutMillis))
+                    .operationTimeout(Duration.ofMillis(properties.operationTimeoutMillis))
                     .build()
 }
 
