@@ -5,7 +5,6 @@ import com.github.msemys.esjc.EventStore
 import com.github.msemys.esjc.PersistentSubscriptionCreateStatus
 import com.github.msemys.esjc.PersistentSubscriptionSettings
 import com.github.msemys.esjc.ResolvedEvent
-import com.github.msemys.esjc.SubscriptionDropReason
 import com.github.msemys.esjc.system.SystemConsumerStrategy
 import io.inventi.eventstore.eventhandler.annotation.ConditionalOnSubscriptionsEnabled
 import io.inventi.eventstore.eventhandler.config.SubscriptionProperties
@@ -30,14 +29,7 @@ abstract class IdempotentEventHandler(
         private val handlerExtensions: List<EventHandlerExtension> = emptyList()
 ) : SmartLifecycle {
     companion object {
-        private val RECOVERABLE_SUBSCRIPTION_DROP_REASONS = setOf(
-                SubscriptionDropReason.ConnectionClosed,
-                SubscriptionDropReason.ServerError,
-                SubscriptionDropReason.SubscribingError,
-                SubscriptionDropReason.CatchUpError
-        )
-
-        val OVERRIDE_EVENT_ID = "overrideEventId"
+        const val OVERRIDE_EVENT_ID = "overrideEventId"
     }
 
     private val logger by LoggerDelegate()
@@ -170,9 +162,9 @@ abstract class IdempotentEventHandler(
             idempotentEventClassifierDao.insert(tableName, idempotentEventClassifierRecord)
             true
         } catch (e: UnableToExecuteStatementException) {
-            if (!e.isDuplicateEntryException)
+            if (!e.isDuplicateEntryException) {
                 throw RuntimeException(e)
-
+            }
             false
         }
     }

@@ -32,7 +32,6 @@ import org.junit.jupiter.api.assertThrows
 import org.junit.jupiter.api.extension.ExtendWith
 import org.slf4j.Logger
 import org.springframework.transaction.support.TransactionTemplate
-import kotlin.RuntimeException
 
 @ExtendWith(MockKExtension::class)
 internal class IdempotentPersistentSubscriptionListenerTest {
@@ -92,8 +91,7 @@ internal class IdempotentPersistentSubscriptionListenerTest {
         eventIsUnseen(true)
         eventShuoldBeSkipped(false)
 
-        every { handlerExtension.beforeHandle(any(), any()) } just runs
-        every { handlerExtension.afterHandle(any(), any()) } just runs
+        every { handlerExtension.handle(any(), any()) } returns {}
 
         val eventMessage = resolvedEventA()
 
@@ -111,8 +109,7 @@ internal class IdempotentPersistentSubscriptionListenerTest {
         eventIsUnseen(false)
         eventShuoldBeSkipped(false)
 
-        every { handlerExtension.beforeHandle(any(), any()) } just runs
-        every { handlerExtension.afterHandle(any(), any()) } just runs
+        every { handlerExtension.handle(any(), any()) } returns {}
 
         val eventMessage = resolvedEventA()
 
@@ -131,8 +128,7 @@ internal class IdempotentPersistentSubscriptionListenerTest {
         eventIsUnseen(true)
         eventShuoldBeSkipped(true)
 
-        every { handlerExtension.beforeHandle(any(), any()) } just runs
-        every { handlerExtension.afterHandle(any(), any()) } just runs
+        every { handlerExtension.handle(any(), any()) } returns {}
 
         val eventMessage = resolvedEventA()
 
@@ -152,8 +148,7 @@ internal class IdempotentPersistentSubscriptionListenerTest {
         eventIsUnseen(true)
         eventShuoldBeSkipped(false)
 
-        every { handlerExtension.beforeHandle(any(), any()) } just runs
-        every { handlerExtension.afterHandle(any(), any()) } just runs
+        every { handlerExtension.handle(any(), any()) } returns {}
 
         val eventMessage = resolvedEventB()
 
@@ -171,8 +166,7 @@ internal class IdempotentPersistentSubscriptionListenerTest {
         eventIsUnseen(true)
         eventShuoldBeSkipped(false)
 
-        every { handlerExtension.beforeHandle(any(), any()) } just runs
-        every { handlerExtension.afterHandle(any(), any()) } just runs
+        every { handlerExtension.handle(any(), any()) } returns {}
 
         val eventMessage = resolvedEventB()
 

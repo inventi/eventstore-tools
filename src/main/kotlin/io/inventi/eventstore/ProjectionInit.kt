@@ -26,13 +26,14 @@ import java.net.URL
 @Validated
 @ComponentScan("io.inventi.eventstore")
 class EventStoreInitConfig {
-
     var projectionsInit: ProjectionsProperties = ProjectionsProperties()
     lateinit var endpoint: String
     lateinit var username: String
     lateinit var password: String
     lateinit var host: String
     var port: Int = 0
+    var heartbeatTimeoutMillis: Long = 1500
+    var operationTimeoutMillis: Long = 7000
 }
 
 class ProjectionsProperties {
