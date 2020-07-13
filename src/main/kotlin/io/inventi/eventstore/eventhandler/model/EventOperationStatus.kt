@@ -4,5 +4,6 @@ enum class EventOperationStatus {
     CREATED,
     UPDATED,
     DELETED,
-    ERROR
+    ERROR,
+    NOTIFICATION
 }
