@@ -4,6 +4,7 @@ import com.fasterxml.jackson.databind.ObjectMapper
 import com.github.msemys.esjc.EventData
 import com.github.msemys.esjc.EventStore
 import com.github.msemys.esjc.ExpectedVersion
+import io.inventi.eventstore.eventhandler.model.EventType
 import io.inventi.eventstore.util.LoggerDelegate
 import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.beans.factory.annotation.Value
@@ -40,9 +41,9 @@ class EventPublisher {
         }
     }
 
-    fun <T> publish(eventType: String, eventData: T): Future<*> {
+    fun <T> publish(eventType: EventType, eventData: Event<T>): Future<*> {
         return pool.submit {
-            addEventToStream(eventType, eventData)
+            addEventToStream(eventType.type, eventData)
         }
     }
 
