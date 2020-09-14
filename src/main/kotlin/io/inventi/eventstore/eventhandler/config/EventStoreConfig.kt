@@ -30,4 +30,6 @@ class EventStoreConfig {
 class SubscriptionProperties {
     var enabled = false
     var updateEnabled = false
+    var messageTimeoutMillis: Long = 30_000
+    var maxRetryCount = 10
 }

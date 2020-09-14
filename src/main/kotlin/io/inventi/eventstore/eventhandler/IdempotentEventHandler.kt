@@ -17,6 +17,7 @@ import org.springframework.beans.factory.annotation.Value
 import org.springframework.context.SmartLifecycle
 import org.springframework.stereotype.Component
 import org.springframework.transaction.support.TransactionTemplate
+import java.time.Duration
 import java.util.concurrent.CompletionException
 
 
@@ -120,6 +121,8 @@ abstract class IdempotentEventHandler(
                 .startFromBeginning()
                 .namedConsumerStrategy(SystemConsumerStrategy.PINNED)
                 .minCheckPointCount(1)
+                .maxRetryCount(subscriptionProperties.maxRetryCount)
+                .messageTimeout(Duration.ofMillis(subscriptionProperties.messageTimeoutMillis))
                 .build()
 
         val subject = "Persistent stream for '$streamName' with groupName '$groupName'"
