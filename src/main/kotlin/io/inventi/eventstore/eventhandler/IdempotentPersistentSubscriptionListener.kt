@@ -40,7 +40,8 @@ internal class IdempotentPersistentSubscriptionListener(
                 SubscriptionDropReason.ConnectionClosed,
                 SubscriptionDropReason.ServerError,
                 SubscriptionDropReason.SubscribingError,
-                SubscriptionDropReason.CatchUpError
+                SubscriptionDropReason.CatchUpError,
+                SubscriptionDropReason.UserInitiated
         )
     }
 
