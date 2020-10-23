@@ -32,4 +32,5 @@ class SubscriptionProperties {
     var updateEnabled = false
     var messageTimeoutMillis: Long = 30_000
     var maxRetryCount = 10
+    var minCheckpointCount = 10
 }
