@@ -120,7 +120,7 @@ abstract class IdempotentEventHandler(
                 .resolveLinkTos(true)
                 .startFromBeginning()
                 .namedConsumerStrategy(SystemConsumerStrategy.PINNED)
-                .minCheckPointCount(1)
+                .minCheckPointCount(subscriptionProperties.minCheckpointCount)
                 .maxRetryCount(subscriptionProperties.maxRetryCount)
                 .messageTimeout(Duration.ofMillis(subscriptionProperties.messageTimeoutMillis))
                 .build()
