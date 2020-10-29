@@ -1,11 +1,5 @@
 package io.inventi.eventstore.eventhandler
 
-import com.fasterxml.jackson.databind.DeserializationFeature
-import com.fasterxml.jackson.databind.MapperFeature
-import com.fasterxml.jackson.databind.ObjectMapper
-import com.fasterxml.jackson.databind.SerializationFeature
-import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule
-import com.fasterxml.jackson.module.kotlin.KotlinModule
 import com.github.msemys.esjc.EventStore
 import com.github.msemys.esjc.PersistentSubscription
 import com.github.msemys.esjc.ResolvedEvent
@@ -17,6 +11,7 @@ import io.inventi.eventstore.eventhandler.events.a.EventA
 import io.inventi.eventstore.eventhandler.events.b.EventB
 import io.inventi.eventstore.eventhandler.model.IdempotentEventClassifierRecord
 import io.inventi.eventstore.eventhandler.util.ExecutingTransactionTemplate
+import io.inventi.eventstore.util.ObjectMapperFactory
 import io.mockk.called
 import io.mockk.every
 import io.mockk.impl.annotations.MockK
@@ -56,13 +51,7 @@ internal class IdempotentPersistentSubscriptionListenerTest {
 
     private val transactionTemplate: TransactionTemplate = ExecutingTransactionTemplate()
 
-    private val objectMapper: ObjectMapper = ObjectMapper().apply {
-        disable(MapperFeature.DEFAULT_VIEW_INCLUSION)
-        disable(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES)
-        disable(SerializationFeature.WRITE_DATES_AS_TIMESTAMPS)
-        registerModule(KotlinModule())
-        registerModule(JavaTimeModule())
-    }
+    private val objectMapper = ObjectMapperFactory.createDefaultObjectMapper()
 
 
     @RelaxedMockK

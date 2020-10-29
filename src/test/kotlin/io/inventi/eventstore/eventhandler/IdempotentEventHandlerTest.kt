@@ -1,11 +1,6 @@
 package io.inventi.eventstore.eventhandler
 
-import com.fasterxml.jackson.databind.DeserializationFeature
-import com.fasterxml.jackson.databind.MapperFeature
 import com.fasterxml.jackson.databind.ObjectMapper
-import com.fasterxml.jackson.databind.SerializationFeature
-import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule
-import com.fasterxml.jackson.module.kotlin.KotlinModule
 import com.github.msemys.esjc.EventData
 import com.github.msemys.esjc.EventStore
 import com.github.msemys.esjc.EventStoreBuilder
@@ -13,6 +8,7 @@ import io.inventi.eventstore.eventhandler.annotation.EventHandler
 import io.inventi.eventstore.eventhandler.events.a.EventA
 import io.inventi.eventstore.eventhandler.events.b.EventB
 import io.inventi.eventstore.eventhandler.util.ExecutingTransactionTemplate
+import io.inventi.eventstore.util.ObjectMapperFactory
 import org.junit.jupiter.api.BeforeAll
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.TestInstance
@@ -42,14 +38,7 @@ internal class IdempotentEventHandlerTest {
                 .userCredentials("admin", "changeit")
                 .build()
 
-        objectMapper = ObjectMapper().apply {
-            disable(MapperFeature.DEFAULT_VIEW_INCLUSION)
-            disable(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES)
-            disable(SerializationFeature.WRITE_DATES_AS_TIMESTAMPS)
-            registerModule(KotlinModule())
-            registerModule(JavaTimeModule())
-        }
-
+        objectMapper = ObjectMapperFactory.createDefaultObjectMapper()
         transactionTemplate = ExecutingTransactionTemplate()
     }
 
@@ -79,7 +68,7 @@ internal class IdempotentEventHandlerTest {
             idempotentEventClassifierDao: IdempotentEventClassifierDao,
             eventStore: EventStore,
             objectMapper: ObjectMapper,
-            transactionTemplate: TransactionTemplate
+            transactionTemplate: TransactionTemplate,
     ) : IdempotentEventHandler(STREAM_NAME, "someGroup", idempotentEventClassifierDao, eventStore, objectMapper, transactionTemplate, "someTable") {
         @EventHandler
         private fun handleA(e: EventA) {
