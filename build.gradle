@@ -1,6 +1,6 @@
 plugins {
-	id 'org.jetbrains.kotlin.jvm' version '1.4.10'
-	id 'org.jetbrains.kotlin.plugin.spring' version '1.4.10'
+    id 'org.jetbrains.kotlin.jvm' version '1.4.10'
+    id 'org.jetbrains.kotlin.plugin.spring' version '1.4.10'
 }
 
 apply plugin: 'maven-publish'
@@ -10,69 +10,78 @@ version = '1.0-SNAPSHOT'
 sourceCompatibility = '1.8'
 
 repositories {
-	mavenCentral()
+    mavenCentral()
 }
 
 dependencies {
-	implementation "org.springframework.boot:spring-boot-starter:${springBootVersion}"
-	implementation "org.springframework.boot:spring-boot-starter-web:${springBootVersion}"
-	implementation "org.springframework.boot:spring-boot-starter-data-jpa:${springBootVersion}"
-	implementation "org.springframework.boot:spring-boot-starter-data-redis:${springBootVersion}"
-	implementation 'org.jetbrains.kotlin:kotlin-reflect'
-	implementation 'org.jetbrains.kotlin:kotlin-stdlib-jdk8'
-	implementation 'com.github.msemys:esjc:2.3.0'
-	implementation 'com.fasterxml.jackson.module:jackson-module-kotlin:2.11.3'
-	implementation 'org.jdbi:jdbi3-core:3.8.0'
-	implementation 'org.jdbi:jdbi3-kotlin:3.8.0'
-	implementation 'org.jdbi:jdbi3-kotlin-sqlobject:3.8.0'
-	implementation 'org.flywaydb:flyway-core:6.0.8'
-	implementation 'com.google.guava:guava:30.0-jre'
-	compileOnly 'org.springframework.cloud:spring-cloud-gcp-starter-trace:1.1.1.RELEASE'
-	compileOnly 'io.micrometer:micrometer-registry-stackdriver:1.5.5'
-	testCompileOnly 'io.micrometer:micrometer-registry-stackdriver:1.5.5'
-	testImplementation("org.springframework.boot:spring-boot-starter-test:${springBootVersion}") {
-		exclude group: 'org.junit.vintage', module: 'junit-vintage-engine'
-	}
-	testImplementation 'com.fasterxml.jackson.dataformat:jackson-dataformat-yaml:2.11.3'
-	testImplementation 'io.mockk:mockk:1.9.3'
-	testImplementation 'org.testcontainers:testcontainers:1.15.0-rc2'
-	testImplementation 'org.testcontainers:junit-jupiter:1.15.0-rc2'
+    implementation "org.springframework.boot:spring-boot-starter:${springBootVersion}"
+    implementation "org.springframework.boot:spring-boot-starter-web:${springBootVersion}"
+    implementation "org.springframework.boot:spring-boot-starter-data-jpa:${springBootVersion}"
+    implementation "org.springframework.boot:spring-boot-starter-data-redis:${springBootVersion}"
+    implementation 'org.jetbrains.kotlin:kotlin-reflect'
+    implementation 'org.jetbrains.kotlin:kotlin-stdlib-jdk8'
+    implementation 'com.github.msemys:esjc:2.3.0'
+    implementation 'com.fasterxml.jackson.module:jackson-module-kotlin:2.11.3'
+    implementation 'org.jdbi:jdbi3-core:3.8.0'
+    implementation 'org.jdbi:jdbi3-kotlin:3.8.0'
+    implementation 'org.jdbi:jdbi3-kotlin-sqlobject:3.8.0'
+    implementation 'org.flywaydb:flyway-core:6.0.8'
+    implementation 'com.google.guava:guava:30.0-jre'
+    compileOnly 'org.springframework.cloud:spring-cloud-gcp-starter-trace:1.1.1.RELEASE'
+    compileOnly 'io.micrometer:micrometer-registry-stackdriver:1.5.5'
+    testCompileOnly 'io.micrometer:micrometer-registry-stackdriver:1.5.5'
+    testImplementation("org.springframework.boot:spring-boot-starter-test:${springBootVersion}") {
+        exclude group: 'org.junit.vintage', module: 'junit-vintage-engine'
+    }
+    testImplementation 'com.fasterxml.jackson.dataformat:jackson-dataformat-yaml:2.11.3'
+    testImplementation 'io.mockk:mockk:1.9.3'
+    testImplementation 'org.testcontainers:testcontainers:1.15.0-rc2'
+    testImplementation 'org.testcontainers:junit-jupiter:1.15.0-rc2'
 }
 
 compileKotlin {
-	kotlinOptions {
-		freeCompilerArgs = ['-Xjsr305=strict']
-		jvmTarget = '1.8'
-	}
+    kotlinOptions {
+        freeCompilerArgs = ['-Xjsr305=strict']
+        jvmTarget = '1.8'
+    }
 }
+
 task sourcesJar(type: Jar, dependsOn: classes) {
-	classifier = 'sources'
-	from sourceSets.main.allSource
+    classifier = 'sources'
+    from sourceSets.main.allSource + sourceSets.test.allSource
 }
+
+task testJar(type: Jar, dependsOn: testClasses) {
+    classifier = 'tests'
+    from sourceSets.test.output
+}
+
 compileTestKotlin {
-	kotlinOptions {
-		freeCompilerArgs = ['-Xjsr305=strict']
-		jvmTarget = '1.8'
-	}
+    kotlinOptions {
+        freeCompilerArgs = ['-Xjsr305=strict']
+        jvmTarget = '1.8'
+    }
 }
 
 test {
-	useJUnitPlatform()
+    useJUnitPlatform()
 }
-
-artifacts {
-	archives sourcesJar
-}
-
 
 publishing {
-	publications {
-		RealmPublication(MavenPublication) {
-			from components.java
-			artifact tasks.sourcesJar
-			groupId project.group
-			artifactId project.name
-			version project.version
-		}
-	}
+    publications {
+        sources(MavenPublication) {
+            from components.java
+            artifact tasks.sourcesJar
+            groupId project.group
+            artifactId project.name
+            version project.version
+        }
+        tests(MavenPublication) {
+            from components.java
+            artifact tasks.testJar
+            groupId project.group
+            artifactId project.name
+            version project.version
+        }
+    }
 }
