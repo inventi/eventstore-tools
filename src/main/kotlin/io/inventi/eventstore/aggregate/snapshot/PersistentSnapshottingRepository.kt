@@ -5,15 +5,18 @@ import com.fasterxml.jackson.annotation.PropertyAccessor
 import com.fasterxml.jackson.databind.ObjectMapper
 import io.inventi.eventstore.aggregate.AggregateRoot
 import io.inventi.eventstore.aggregate.PersistentRepository
+import io.micrometer.core.instrument.MeterRegistry
 import kotlin.reflect.KClass
 import kotlin.reflect.full.companionObjectInstance
 import kotlin.time.ExperimentalTime
 import kotlin.time.measureTime
 import kotlin.time.measureTimedValue
 
-abstract class PersistentSnapshottingRepository<AGGREGATE_ROOT, SNAPSHOT>(eventPackage: String, objectMapper: ObjectMapper) :
-        PersistentRepository<AGGREGATE_ROOT>(eventPackage, objectMapper),
-        SnapshottingRepository<AGGREGATE_ROOT, SNAPSHOT>
+abstract class PersistentSnapshottingRepository<AGGREGATE_ROOT, SNAPSHOT>(
+        eventPackage: String,
+        objectMapper: ObjectMapper,
+        meterRegistry: MeterRegistry? = null,
+) : PersistentRepository<AGGREGATE_ROOT>(eventPackage, objectMapper, meterRegistry), SnapshottingRepository<AGGREGATE_ROOT, SNAPSHOT>
         where AGGREGATE_ROOT : AggregateRoot,
               AGGREGATE_ROOT : SnapshottableAggregate<AGGREGATE_ROOT, SNAPSHOT>,
               SNAPSHOT : AggregateRootSnapshot<AGGREGATE_ROOT> {
@@ -98,7 +101,7 @@ abstract class PersistentSnapshottingRepository<AGGREGATE_ROOT, SNAPSHOT>(eventP
     private data class RestoredAggregateAndEventNumber<AGGREGATE_ROOT>(
             val aggregate: AGGREGATE_ROOT,
             val eventNumber: Long?,
-            val restored: Boolean
+            val restored: Boolean,
     )
 
     private fun AGGREGATE_ROOT.description(): String = "${aggregateType.simpleName}(id=${id})"
