@@ -1,6 +1,8 @@
-package io.inventi.eventstore.aggregate
+package io.inventi.eventstore.aggregate.tests
 
 import com.github.msemys.esjc.EventStore
+import io.inventi.eventstore.aggregate.AggregateRoot
+import io.inventi.eventstore.aggregate.PersistentRepository
 import io.inventi.eventstore.util.LoggerDelegate
 import org.junit.jupiter.api.Assertions.assertFalse
 import org.junit.jupiter.api.BeforeEach

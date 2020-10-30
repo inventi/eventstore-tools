@@ -4,6 +4,7 @@ import com.fasterxml.jackson.databind.ObjectMapper
 import com.github.msemys.esjc.EventData
 import com.github.msemys.esjc.EventStore
 import com.github.msemys.esjc.operation.StreamNotFoundException
+import io.inventi.eventstore.aggregate.metadata.MetadataSource
 import io.inventi.eventstore.util.LoggerDelegate
 import io.inventi.eventstore.util.ObjectMapperFactory
 import io.micrometer.core.instrument.MeterRegistry

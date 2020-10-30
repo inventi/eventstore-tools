@@ -1,4 +1,4 @@
-package io.inventi.eventstore.aggregate
+package io.inventi.eventstore.aggregate.tests
 
 import com.fasterxml.jackson.core.type.TypeReference
 import com.fasterxml.jackson.databind.DeserializationFeature
@@ -9,6 +9,9 @@ import com.fasterxml.jackson.databind.node.ObjectNode
 import com.fasterxml.jackson.dataformat.yaml.YAMLFactory
 import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule
 import com.fasterxml.jackson.module.kotlin.KotlinModule
+import io.inventi.eventstore.aggregate.AggregateRoot
+import io.inventi.eventstore.aggregate.Event
+import io.inventi.eventstore.aggregate.EventMessage
 import io.inventi.eventstore.aggregate.snapshot.AggregateRootSnapshot
 import io.inventi.eventstore.aggregate.snapshot.SnapshottableAggregate
 import io.inventi.eventstore.util.LoggerDelegate

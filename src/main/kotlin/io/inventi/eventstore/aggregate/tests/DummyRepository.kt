@@ -1,4 +1,9 @@
-package io.inventi.eventstore.aggregate
+package io.inventi.eventstore.aggregate.tests
+
+import io.inventi.eventstore.aggregate.AggregateRoot
+import io.inventi.eventstore.aggregate.Event
+import io.inventi.eventstore.aggregate.EventMessage
+import io.inventi.eventstore.aggregate.Repository
 
 open class DummyRepository<T> : Repository<T> where T : AggregateRoot {
     var savedEventMessages = listOf<EventMessage>()

@@ -14,14 +14,19 @@ repositories {
 }
 
 dependencies {
+    def jacksonVersion = '2.11.3'
+    def testContainersVersion = '1.15.0-rc2'
     implementation "org.springframework.boot:spring-boot-starter:${springBootVersion}"
     implementation "org.springframework.boot:spring-boot-starter-web:${springBootVersion}"
-    implementation "org.springframework.boot:spring-boot-starter-data-jpa:${springBootVersion}"
     implementation "org.springframework.boot:spring-boot-starter-data-redis:${springBootVersion}"
+    implementation("org.springframework.boot:spring-boot-starter-test:${springBootVersion}") {
+        exclude group: 'org.junit.vintage', module: 'junit-vintage-engine'
+    }
+    implementation "com.fasterxml.jackson.dataformat:jackson-dataformat-yaml:$jacksonVersion"
+    implementation "com.fasterxml.jackson.module:jackson-module-kotlin:$jacksonVersion"
     implementation 'org.jetbrains.kotlin:kotlin-reflect'
     implementation 'org.jetbrains.kotlin:kotlin-stdlib-jdk8'
     implementation 'com.github.msemys:esjc:2.3.0'
-    implementation 'com.fasterxml.jackson.module:jackson-module-kotlin:2.11.3'
     implementation 'org.jdbi:jdbi3-core:3.8.0'
     implementation 'org.jdbi:jdbi3-kotlin:3.8.0'
     implementation 'org.jdbi:jdbi3-kotlin-sqlobject:3.8.0'
@@ -30,30 +35,21 @@ dependencies {
     compileOnly 'org.springframework.cloud:spring-cloud-gcp-starter-trace:1.1.1.RELEASE'
     compileOnly 'io.micrometer:micrometer-registry-stackdriver:1.5.5'
     testCompileOnly 'io.micrometer:micrometer-registry-stackdriver:1.5.5'
-    testImplementation("org.springframework.boot:spring-boot-starter-test:${springBootVersion}") {
-        exclude group: 'org.junit.vintage', module: 'junit-vintage-engine'
-    }
-    testImplementation 'com.fasterxml.jackson.dataformat:jackson-dataformat-yaml:2.11.3'
     testImplementation 'io.mockk:mockk:1.9.3'
-    testImplementation 'org.testcontainers:testcontainers:1.15.0-rc2'
-    testImplementation 'org.testcontainers:junit-jupiter:1.15.0-rc2'
+    testImplementation "org.testcontainers:testcontainers:$testContainersVersion"
+    testImplementation "org.testcontainers:junit-jupiter:$testContainersVersion"
 }
 
 compileKotlin {
     kotlinOptions {
-        freeCompilerArgs = ['-Xjsr305=strict']
+        freeCompilerArgs = ['-Xjsr305=strict', '-Xopt-in=kotlin.RequiresOptIn']
         jvmTarget = '1.8'
     }
 }
 
 task sourcesJar(type: Jar, dependsOn: classes) {
     classifier = 'sources'
-    from sourceSets.main.allSource + sourceSets.test.allSource
-}
-
-task testJar(type: Jar, dependsOn: testClasses) {
-    classifier = 'tests'
-    from sourceSets.test.output
+    from sourceSets.main.allSource
 }
 
 compileTestKotlin {
@@ -72,13 +68,6 @@ publishing {
         sources(MavenPublication) {
             from components.java
             artifact tasks.sourcesJar
-            groupId project.group
-            artifactId project.name
-            version project.version
-        }
-        tests(MavenPublication) {
-            from components.java
-            artifact tasks.testJar
             groupId project.group
             artifactId project.name
             version project.version

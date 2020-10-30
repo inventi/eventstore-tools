@@ -1,4 +1,4 @@
-package io.inventi.eventstore.aggregate.event
+package io.inventi.eventstore.aggregate.tests
 
 import io.inventi.eventstore.aggregate.Event
 import java.time.Instant

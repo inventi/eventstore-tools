@@ -3,7 +3,7 @@ package io.inventi.eventstore.eventhandler
 import com.fasterxml.jackson.databind.ObjectMapper
 import com.github.msemys.esjc.EventData
 import com.github.msemys.esjc.EventStore
-import com.github.msemys.esjc.EventStoreBuilder
+import io.inventi.eventstore.EventStoreIntegrationTest
 import io.inventi.eventstore.eventhandler.annotation.EventHandler
 import io.inventi.eventstore.eventhandler.events.a.EventA
 import io.inventi.eventstore.eventhandler.events.b.EventB
@@ -12,17 +12,16 @@ import io.inventi.eventstore.util.ObjectMapperFactory
 import org.junit.jupiter.api.BeforeAll
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.TestInstance
+import org.junit.jupiter.api.TestInstance.Lifecycle.PER_CLASS
 import org.mockito.Mockito.mock
 import org.springframework.transaction.support.TransactionTemplate
 
-@TestInstance(TestInstance.Lifecycle.PER_CLASS)
-internal class IdempotentEventHandlerTest {
+@TestInstance(PER_CLASS)
+internal class IdempotentEventHandlerTest : EventStoreIntegrationTest() {
 
     companion object {
         private val STREAM_NAME = "${IdempotentEventHandlerTest::class.java.simpleName}-22"
     }
-
-    private lateinit var eventStore: EventStore
 
     private lateinit var objectMapper: ObjectMapper
 
@@ -32,12 +31,6 @@ internal class IdempotentEventHandlerTest {
 
     @BeforeAll
     fun setUp() {
-        eventStore = EventStoreBuilder
-                .newBuilder()
-                .singleNodeAddress("127.0.0.1", 1113)
-                .userCredentials("admin", "changeit")
-                .build()
-
         objectMapper = ObjectMapperFactory.createDefaultObjectMapper()
         transactionTemplate = ExecutingTransactionTemplate()
     }
