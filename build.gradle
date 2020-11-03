@@ -16,6 +16,7 @@ repositories {
 dependencies {
     def jacksonVersion = '2.11.3'
     def testContainersVersion = '1.15.0-rc2'
+    api 'com.github.msemys:esjc:2.3.0'
     implementation "org.springframework.boot:spring-boot-starter:${springBootVersion}"
     implementation "org.springframework.boot:spring-boot-starter-web:${springBootVersion}"
     implementation "org.springframework.boot:spring-boot-starter-data-redis:${springBootVersion}"
@@ -26,7 +27,6 @@ dependencies {
     implementation "com.fasterxml.jackson.module:jackson-module-kotlin:$jacksonVersion"
     implementation 'org.jetbrains.kotlin:kotlin-reflect'
     implementation 'org.jetbrains.kotlin:kotlin-stdlib-jdk8'
-    implementation 'com.github.msemys:esjc:2.3.0'
     implementation 'org.jdbi:jdbi3-core:3.8.0'
     implementation 'org.jdbi:jdbi3-kotlin:3.8.0'
     implementation 'org.jdbi:jdbi3-kotlin-sqlobject:3.8.0'
