@@ -34,6 +34,12 @@ abstract class AggregateRoot(val id: String) {
         appendEvent(event, emptyMap())
     }
 
+    fun appendEventIfNotNull(event: Event?) {
+        if (event != null) {
+            appendEvent(event)
+        }
+    }
+
     fun appendEvent(event: Event, metadata: Map<String, Any?>) {
         val eventMessage = EventMessage(event, Instant.now(), lastCommittedEventId, metadata)
         uncommittedEvents.add(eventMessage)
@@ -62,6 +68,7 @@ abstract class AggregateRoot(val id: String) {
         if (eventMessage.eventNumber >= 0) lastCommittedEventId = eventMessage.eventNumber
 
         findMatchingMethods(eventMessage).forEach {
+            it.isAccessible = true
             it.invoke(this, eventMessage.event)
         }
     }
