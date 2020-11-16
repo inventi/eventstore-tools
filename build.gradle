@@ -1,4 +1,6 @@
 plugins {
+    id 'org.springframework.boot' version '2.3.4.RELEASE'
+    id 'io.spring.dependency-management' version "1.0.10.RELEASE"
     id 'org.jetbrains.kotlin.jvm' version '1.4.10'
     id 'org.jetbrains.kotlin.plugin.spring' version '1.4.10'
 }
@@ -17,10 +19,11 @@ dependencies {
     def jacksonVersion = '2.11.3'
     def testContainersVersion = '1.15.0-rc2'
     api 'com.github.msemys:esjc:2.3.0'
-    implementation "org.springframework.boot:spring-boot-starter:${springBootVersion}"
-    implementation "org.springframework.boot:spring-boot-starter-web:${springBootVersion}"
-    implementation "org.springframework.boot:spring-boot-starter-data-redis:${springBootVersion}"
-    implementation("org.springframework.boot:spring-boot-starter-test:${springBootVersion}") {
+    implementation "org.springframework.boot:spring-boot-starter"
+    implementation "org.springframework.boot:spring-boot-starter-web"
+    compileOnly "org.springframework.boot:spring-boot-starter-data-redis"
+    implementation "org.springframework:spring-tx"
+    implementation("org.springframework.boot:spring-boot-starter-test") {
         exclude group: 'org.junit.vintage', module: 'junit-vintage-engine'
     }
     implementation "com.fasterxml.jackson.dataformat:jackson-dataformat-yaml:$jacksonVersion"
@@ -45,6 +48,14 @@ compileKotlin {
         freeCompilerArgs = ['-Xjsr305=strict', '-Xopt-in=kotlin.RequiresOptIn']
         jvmTarget = '1.8'
     }
+}
+
+bootJar {
+    enabled = false
+}
+
+jar {
+    enabled = true
 }
 
 task sourcesJar(type: Jar, dependsOn: classes) {
