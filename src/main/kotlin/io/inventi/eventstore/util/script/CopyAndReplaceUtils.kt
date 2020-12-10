@@ -28,7 +28,7 @@
  *
  */
 
-package script
+package io.inventi.eventstore.util.script
 
 import com.fasterxml.jackson.databind.ObjectMapper
 import com.fasterxml.jackson.databind.node.ObjectNode
@@ -58,20 +58,14 @@ data class EsConfig(
         val esPort: Int = 1113,
         val esUser: String = "admin",
         val esPass: String = "changeit",
-        val bufferSize: Int = 1024,
-        val writeChunkSize: Int = 128,
-)
-
-data class EventStoreUtils(
-        val eventStore: EventStore,
-        val esConfig: EsConfig,
-        val objectMapper: ObjectMapper,
 )
 
 fun withEventStore(
         esConfig: EsConfig = EsConfig(),
+        bufferSize: Int = 1024,
+        writeChunkSize: Int = 128,
         objectMapper: ObjectMapper = ObjectMapperFactory.createDefaultObjectMapper(),
-        block: (utils: EventStoreUtils) -> Unit
+        block: CopyAndReplaceOperation.(eventStore: EventStore) -> Unit,
 ) {
     if (!System.getProperty("java.version").startsWith("1.8")) {
         throw IllegalStateException("Only Java 8 is supported. ESJC uses GSON which fails to load java.sql.Time class on Java 11.")
@@ -85,87 +79,95 @@ fun withEventStore(
             .userCredentials(esConfig.esUser, esConfig.esPass)
             .build()
     try {
-        block(EventStoreUtils(eventStore, esConfig, objectMapper))
+        CopyAndReplaceOperation(eventStore, objectMapper, bufferSize, writeChunkSize).block(eventStore)
     } finally {
         eventStore.shutdown()
     }
 }
 
-fun EventStoreUtils.copyAndReplace(streamId: String, eventNumbers: List<Long>, transformFn: (event: RecordedEvent, mapper: ObjectMapper) -> ByteArray?) {
-    val newTransformedEventsData = transformEvents(streamId, eventNumbers, transformFn)
-    val newEventsData = newTransformedEventsData.eventsData.values
-    val initialExpectedVersion = newTransformedEventsData.initialExpectedVersion
+data class CopyAndReplaceOperation(
+        private val eventStore: EventStore,
+        private val objectMapper: ObjectMapper,
+        private val bufferSize: Int,
+        private val writeChunkSize: Int,
+) {
+    fun copyAndReplace(streamId: String, eventNumbers: List<Long>, transformFn: (event: RecordedEvent, mapper: ObjectMapper) -> ByteArray?) {
+        val newTransformedEventsData = transformEvents(streamId, eventNumbers, transformFn)
+        val newEventsData = newTransformedEventsData.eventsData.values
+        val initialExpectedVersion = newTransformedEventsData.initialExpectedVersion
 
-    appendEvents(streamId, newEventsData, initialExpectedVersion)
-    truncateBefore(initialExpectedVersion + 1, streamId)
-}
-
-private fun EventStoreUtils.transformEvents(streamId: String, eventNumbers: List<Long>, transformFn: (event: RecordedEvent, mapper: ObjectMapper) -> ByteArray?): TransformedEventsData {
-    val firstEventNumber = this.eventStore.getStreamMetadata(streamId)
-            .thenApply { it.streamMetadata.truncateBefore }
-            .get()
-            ?: 0
-
-    var initialExpectedVersion: Long = firstEventNumber
-    val eventData = this.eventStore.iterateStreamEventsForward(streamId, firstEventNumber, esConfig.bufferSize, true)
-            .asSequence().mapNotNull { resolvedEvent ->
-                val event = resolvedEvent.event
-                initialExpectedVersion = event.eventNumber
-                val (data, meta) = if (resolvedEvent.originalEventNumber() in eventNumbers) {
-                    val newData = transformFn(event, objectMapper)
-                    newData to transformMetadata(event, objectMapper, shouldPutId = true)
-                } else {
-                    event.data to transformMetadata(event, objectMapper, shouldPutId = true)
-                }
-
-                println("#${event.eventNumber}: ${meta?.toString(Charsets.UTF_8)} --> ${data?.toString(Charsets.UTF_8)}")
-                data?.let {
-                    event to EventData.newBuilder()
-                            .type(event.eventType)
-                            .jsonData(data)
-                            .jsonMetadata(meta)
-                            .build()
-                }
-
-            }.toMap()
-    return TransformedEventsData(initialExpectedVersion, eventData)
-}
-
-private fun EventStoreUtils.appendEvents(streamId: String, events: Collection<EventData>, initialExpectedVersion: Long) {
-    eventStore.startTransaction(streamId,  initialExpectedVersion).get().use { transaction ->
-        events.chunked(esConfig.writeChunkSize).forEach { events ->
-            transaction.write(events).get()
-        }
-        transaction.commit().get()
+        appendEvents(streamId, newEventsData, initialExpectedVersion)
+        truncateBefore(initialExpectedVersion + 1, streamId)
     }
-}
 
-private fun transformMetadata(event: RecordedEvent, objectMapper: ObjectMapper, shouldPutId: Boolean): ByteArray? {
-    val newMeta = objectMapper.readTree(event.metadata).apply {
-        this as ObjectNode
+    private fun transformEvents(streamId: String, eventNumbers: List<Long>, transformFn: (event: RecordedEvent, mapper: ObjectMapper) -> ByteArray?): TransformedEventsData {
+        val firstEventNumber = this.eventStore.getStreamMetadata(streamId)
+                .thenApply { it.streamMetadata.truncateBefore }
+                .get()
+                ?: 0
 
-        put(TRANSFORMED_FROM_NUMBER, event.eventNumber)
-        if (shouldPutId) {
-            val previousIdOverride = path(OVERRIDE_EVENT_ID)?.textValue()
-            val previousNumberOverride = path(OVERRIDE_EVENT_NUMBER)?.textValue()
-            put(OVERRIDE_EVENT_ID, previousIdOverride ?: event.eventId.toString())
-            put(OVERRIDE_EVENT_NUMBER, previousNumberOverride ?: event.eventNumber.toString())
+        var initialExpectedVersion: Long = firstEventNumber
+        val eventData = this.eventStore.iterateStreamEventsForward(streamId, firstEventNumber, bufferSize, true)
+                .asSequence().mapNotNull { resolvedEvent ->
+                    val event = resolvedEvent.event
+                    initialExpectedVersion = event.eventNumber
+                    val (data, meta) = if (resolvedEvent.originalEventNumber() in eventNumbers) {
+                        val newData = transformFn(event, objectMapper)
+                        newData to transformMetadata(event, objectMapper, shouldPutId = true)
+                    } else {
+                        event.data to transformMetadata(event, objectMapper, shouldPutId = true)
+                    }
 
-            put(TRANSFORMED_FROM_ID, event.eventId.toString())
+                    println("#${event.eventNumber}: ${meta?.toString(Charsets.UTF_8)} --> ${data?.toString(Charsets.UTF_8)}")
+                    data?.let {
+                        event to EventData.newBuilder()
+                                .type(event.eventType)
+                                .jsonData(data)
+                                .jsonMetadata(meta)
+                                .build()
+                    }
+
+                }.toMap()
+        return TransformedEventsData(initialExpectedVersion, eventData)
+    }
+
+    private fun appendEvents(streamId: String, events: Collection<EventData>, initialExpectedVersion: Long) {
+        eventStore.startTransaction(streamId,  initialExpectedVersion).get().use { transaction ->
+            events.chunked(writeChunkSize).forEach { events ->
+                transaction.write(events).get()
+            }
+            transaction.commit().get()
+        }
+    }
+
+    private fun transformMetadata(event: RecordedEvent, objectMapper: ObjectMapper, shouldPutId: Boolean): ByteArray? {
+        val newMeta = objectMapper.readTree(event.metadata).apply {
+            this as ObjectNode
+
             put(TRANSFORMED_FROM_NUMBER, event.eventNumber)
+            if (shouldPutId) {
+                val previousIdOverride = path(OVERRIDE_EVENT_ID)?.textValue()
+                val previousNumberOverride = path(OVERRIDE_EVENT_NUMBER)?.textValue()
+                put(OVERRIDE_EVENT_ID, previousIdOverride ?: event.eventId.toString())
+                put(OVERRIDE_EVENT_NUMBER, previousNumberOverride ?: event.eventNumber.toString())
+
+                put(TRANSFORMED_FROM_ID, event.eventId.toString())
+                put(TRANSFORMED_FROM_NUMBER, event.eventNumber)
+            }
         }
+
+        return objectMapper.writeValueAsBytes(newMeta)
     }
 
-    return objectMapper.writeValueAsBytes(newMeta)
+    private fun truncateBefore(eventNumber: Long, stream: String) {
+        val readResult: StreamMetadataResult? = eventStore.getStreamMetadata(stream).join()
+        val metastreamVersion = readResult?.metastreamVersion ?: ExpectedVersion.ANY
+        println("metastreamVersion -> $metastreamVersion")
+        val updated = (readResult?.streamMetadata?.toBuilder() ?: StreamMetadata.newBuilder())
+                .truncateBefore(eventNumber)
+                .build()
+
+        eventStore.setStreamMetadata(stream, metastreamVersion, updated).join()
+    }
 }
 
-private fun EventStoreUtils.truncateBefore(eventNumber: Long, stream: String) {
-    val readResult: StreamMetadataResult? = eventStore.getStreamMetadata(stream).join()
-    val metastreamVersion = readResult?.metastreamVersion ?: ExpectedVersion.ANY
-    println("metastreamVersion -> $metastreamVersion")
-    val updated = (readResult?.streamMetadata?.toBuilder() ?: StreamMetadata.newBuilder())
-            .truncateBefore(eventNumber)
-            .build()
-
-    eventStore.setStreamMetadata(stream, metastreamVersion, updated).join()
-}
