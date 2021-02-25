@@ -43,6 +43,8 @@ import io.inventi.eventstore.util.ObjectMapperFactory
 import java.net.InetSocketAddress
 import java.time.Duration
 
+val EMPTY_OBJECT_BYTE_ARRAY = "{}".toByteArray()
+
 const val OVERRIDE_EVENT_ID = "overrideEventId"
 const val OVERRIDE_EVENT_NUMBER = "overrideEventNumber"
 const val TRANSFORMED_FROM_ID = "transformedFromJavaEventId"
@@ -141,7 +143,8 @@ data class CopyAndReplaceOperation(
     }
 
     private fun transformMetadata(event: RecordedEvent, objectMapper: ObjectMapper, shouldPutId: Boolean): ByteArray? {
-        val newMeta = objectMapper.readTree(event.metadata).apply {
+        val metaData = event.metadata.takeIf { it.isNotEmpty() } ?: EMPTY_OBJECT_BYTE_ARRAY
+        val newMeta = objectMapper.readTree(metaData).apply {
             this as ObjectNode
 
             put(TRANSFORMED_FROM_NUMBER, event.eventNumber)
