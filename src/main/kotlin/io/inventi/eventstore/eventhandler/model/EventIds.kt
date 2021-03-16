@@ -1,6 +1,7 @@
 package io.inventi.eventstore.eventhandler.model
 
 data class EventIds(
-        val originalId: String?,
-        val effectiveId: String,
+        val overridden: String?,
+        val current: String,
+        val effective: String,
 )

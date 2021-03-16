@@ -190,8 +190,8 @@ internal class IdempotentPersistentSubscriptionListener(
     }
 
     private fun RecordedEvent.toEventIdsOrMetadata(method: Method, parameterNumber: Int) =
-            if (method.parameters[parameterNumber].type.simpleName == EventIds::class.java.simpleName) {
-                EventIds(originalId = originalEventIdOrNull, effectiveId = effectiveEventId)
+            if (method.parameters[parameterNumber].type.isAssignableFrom(EventIds::class.java)) {
+                EventIds(overridden = overriddenEventIdOrNull, current = eventId.toString(), effective = effectiveEventId)
             } else {
                 deserialize(method.parameterTypes[parameterNumber], metadata)
             }
@@ -202,10 +202,10 @@ internal class IdempotentPersistentSubscriptionListener(
 
     private val RecordedEvent.effectiveEventId: String
         get() {
-            return originalEventIdOrNull ?: eventId.toString()
+            return overriddenEventIdOrNull ?: eventId.toString()
         }
 
-    private val RecordedEvent.originalEventIdOrNull: String?
+    private val RecordedEvent.overriddenEventIdOrNull: String?
         get() {
             return objectMapper.runCatching {
                 readTree(metadata).path(IdempotentEventHandler.OVERRIDE_EVENT_ID).textValue()
