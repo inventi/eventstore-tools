@@ -8,7 +8,9 @@ import com.google.protobuf.ByteString
 import io.inventi.eventstore.eventhandler.annotation.EventHandler
 import io.inventi.eventstore.eventhandler.annotation.Retry
 import io.inventi.eventstore.eventhandler.events.a.EventA
+import io.inventi.eventstore.eventhandler.events.a.MetadataA
 import io.inventi.eventstore.eventhandler.events.b.EventB
+import io.inventi.eventstore.eventhandler.model.EventIds
 import io.inventi.eventstore.eventhandler.model.IdempotentEventClassifierRecord
 import io.inventi.eventstore.eventhandler.util.ExecutingTransactionTemplate
 import io.inventi.eventstore.util.ObjectMapperFactory
@@ -165,6 +167,86 @@ internal class IdempotentPersistentSubscriptionListenerTest {
         verify(exactly = 1) { handler.handle() }
     }
 
+    @Test
+    fun `calls handler method with event and metadata`() {
+        // given
+        listener = listenerBuilder(EventHandlerWithMetadataImplementation(handler))
+
+        every { handler.handle() } just runs
+        eventIsUnseen(true)
+        eventShuoldBeSkipped(false)
+
+        every { handlerExtension.handle(any(), any()) } returns {}
+
+        val eventMessage = resolvedEventAWithMetadata()
+
+        // when
+        listener.onEvent(persistentSubscription, eventMessage)
+
+        // then
+        verify { handler.handle() }
+    }
+
+    @Test
+    fun `calls handler method with event and eventIds`() {
+        // given
+        listener = listenerBuilder(EventHandlerWithEventIdsImplementation(handler))
+
+        every { handler.handle() } just runs
+        eventIsUnseen(true)
+        eventShuoldBeSkipped(false)
+
+        every { handlerExtension.handle(any(), any()) } returns {}
+
+        val eventMessage = resolvedEventA()
+
+        // when
+        listener.onEvent(persistentSubscription, eventMessage)
+
+        // then
+        verify { handler.handle() }
+    }
+
+    @Test
+    fun `calls handler method with event, metadata and eventIds`() {
+        // given
+        listener = listenerBuilder(EventHandlerWithMetadataAndEventIdsImplementation(handler))
+
+        every { handler.handle() } just runs
+        eventIsUnseen(true)
+        eventShuoldBeSkipped(false)
+
+        every { handlerExtension.handle(any(), any()) } returns {}
+
+        val eventMessage = resolvedEventAWithMetadata()
+
+        // when
+        listener.onEvent(persistentSubscription, eventMessage)
+
+        // then
+        verify { handler.handle() }
+    }
+
+    @Test
+    fun `calls handler method with event, eventIds and metadata`() {
+        // given
+        listener = listenerBuilder(EventHandlerWithMetadataAndEventIdsImplementation(handler))
+
+        every { handler.handle() } just runs
+        eventIsUnseen(true)
+        eventShuoldBeSkipped(false)
+
+        every { handlerExtension.handle(any(), any()) } returns {}
+
+        val eventMessage = resolvedEventAWithMetadata()
+
+        // when
+        listener.onEvent(persistentSubscription, eventMessage)
+
+        // then
+        verify { handler.handle() }
+    }
+
 
     private fun eventIsUnseen(isUnseen: Boolean) {
         every { saveEventId.invoke(any()) } returns isUnseen
@@ -179,17 +261,20 @@ internal class IdempotentPersistentSubscriptionListenerTest {
         return resolvedEvent("EventA", """{"x": 5}""")
     }
 
+    private fun resolvedEventAWithMetadata(): RetryableResolvedEvent {
+        return resolvedEvent("EventA", """{"x": 5}""", eventMetadata = """{"aggregateId": "SOME_STRING"}""")
+    }
+
     private fun resolvedEventB(): RetryableResolvedEvent {
         return resolvedEvent("EventB", """{"y": 10}""")
     }
 
-
-    private fun resolvedEvent(eventType: String, eventData: String): RetryableResolvedEvent {
+    private fun resolvedEvent(eventType: String, eventData: String, eventMetadata: String? = null): RetryableResolvedEvent {
         return retryableResolvedEvent(
                 uuid = "11111111-1111-1111-1111-111111111111",
                 number = 0L,
                 eventData = eventData,
-                eventMetadata = null,
+                eventMetadata = eventMetadata,
                 type = eventType
         )
     }
@@ -217,6 +302,11 @@ internal class IdempotentPersistentSubscriptionListenerTest {
 
     private fun String.toByteString() = ByteString.copyFrom(this, Charsets.UTF_8.name())
 
+    private fun listenerBuilder(implementation: Any) = IdempotentPersistentSubscriptionListener(
+            implementation, streamName, groupName, eventStore, saveEventId, shouldSkip,
+            listOf(handlerExtension), transactionTemplate, objectMapper, logger
+    )
+
     private class EventHandlerImplementation(private val handler: Handler) {
         @EventHandler(skipWhenReplaying = true)
         fun onEvent(event: EventA) {
@@ -226,6 +316,32 @@ internal class IdempotentPersistentSubscriptionListenerTest {
         @EventHandler(skipWhenReplaying = true)
         @Retry(exceptions = [IllegalArgumentException::class], maxAttempts = 3, backoffDelayMillis = 100)
         fun onEventWithRetry(event: EventB) {
+            handler.handle()
+        }
+    }
+
+    private class EventHandlerWithMetadataImplementation(private val handler: Handler) {
+        @EventHandler(skipWhenReplaying = true)
+        fun onEventWithMetadata(event: EventA, metadata: MetadataA) {
+            handler.handle()
+        }
+    }
+
+    private class EventHandlerWithEventIdsImplementation(private val handler: Handler) {
+        @EventHandler(skipWhenReplaying = true)
+        fun onEventWithEventIds(event: EventA, eventIds: EventIds) {
+            handler.handle()
+        }
+    }
+
+    private class EventHandlerWithMetadataAndEventIdsImplementation(private val handler: Handler) {
+        @EventHandler(skipWhenReplaying = true)
+        fun onEventWithMetadataAndEventIds(event: EventA, metadata: MetadataA, eventIds: EventIds) {
+            handler.handle()
+        }
+
+        @EventHandler(skipWhenReplaying = true)
+        fun onEventWithEventIdsAndMetadata(event: EventA, eventIds: EventIds, metadata: MetadataA) {
             handler.handle()
         }
     }
