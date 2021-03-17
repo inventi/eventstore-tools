@@ -191,7 +191,7 @@ internal class IdempotentPersistentSubscriptionListener(
 
     private fun RecordedEvent.toEventIdsOrMetadata(method: Method, parameterNumber: Int) =
             if (method.parameters[parameterNumber].type.isAssignableFrom(EventIds::class.java)) {
-                EventIds(overridden = overriddenEventIdOrNull, current = eventId.toString(), effective = effectiveEventId)
+                EventIds(overridden = overriddenEventIdOrNull, current = eventId.toString())
             } else {
                 deserialize(method.parameterTypes[parameterNumber], metadata)
             }
