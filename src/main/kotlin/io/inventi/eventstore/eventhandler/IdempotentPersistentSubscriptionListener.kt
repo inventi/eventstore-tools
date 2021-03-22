@@ -13,8 +13,8 @@ import io.inventi.eventstore.eventhandler.annotation.EventHandler
 import io.inventi.eventstore.eventhandler.annotation.Retry
 import io.inventi.eventstore.eventhandler.exception.EventAcknowledgementFailedException
 import io.inventi.eventstore.eventhandler.exception.UnsupportedMethodException
+import io.inventi.eventstore.eventhandler.model.EventIds
 import io.inventi.eventstore.eventhandler.model.IdempotentEventClassifierRecord
-import io.inventi.eventstore.eventhandler.model.MethodParametersType
 import org.slf4j.Logger
 import org.springframework.transaction.support.TransactionTemplate
 import java.lang.reflect.InvocationTargetException
@@ -155,16 +155,24 @@ internal class IdempotentPersistentSubscriptionListener(
 
     private fun handleMethod(method: Method, event: RecordedEvent) {
         try {
-            val methodParametersType = extractMethodParameterTypes(method)
+            if (method.parameterTypes.isNullOrEmpty() || method.parameterTypes.size > 3) {
+                throw UnsupportedMethodException("Method must have 1-3 parameters")
+            }
 
-            val eventData = deserialize(methodParametersType.dataType, event.data)
-            if (methodParametersType.metadataType != null) {
-                val metadata = deserialize(methodParametersType.metadataType, event.metadata)
-                method.invoke(handlerInstance, eventData, metadata)
+            val eventDataFirstParam = deserialize(method.parameterTypes[0], event.data)
+            if (method.parameterTypes.size == 1) {
+                method.invoke(handlerInstance, eventDataFirstParam)
+                return
+            } else if (method.parameterTypes.size == 2) {
+                val secondParam: Any = event.toEventIdsOrMetadata(method, 1)
+                method.invoke(handlerInstance, eventDataFirstParam, secondParam)
+                return
+            } else {
+                val secondParam: Any = event.toEventIdsOrMetadata(method, 1)
+                val thirdParam: Any = event.toEventIdsOrMetadata(method, 2)
+                method.invoke(handlerInstance, eventDataFirstParam, secondParam, thirdParam)
                 return
             }
-            method.invoke(handlerInstance, eventData)
-
         } catch (e: Exception) {
             logger.error("Failure on method invocation ${method.name}: " +
                     "eventId: ${event.eventId}, " +
@@ -181,28 +189,27 @@ internal class IdempotentPersistentSubscriptionListener(
         }
     }
 
+    private fun RecordedEvent.toEventIdsOrMetadata(method: Method, parameterNumber: Int) =
+            if (method.parameters[parameterNumber].type.isAssignableFrom(EventIds::class.java)) {
+                EventIds(overridden = overriddenEventIdOrNull, current = eventId.toString())
+            } else {
+                deserialize(method.parameterTypes[parameterNumber], metadata)
+            }
+
     private fun deserialize(type: Class<*>, data: ByteArray): Any {
         return objectMapper.readValue(data, type)
     }
 
-    private fun extractMethodParameterTypes(it: Method): MethodParametersType {
-        if (it.parameterTypes.isNullOrEmpty() || it.parameterTypes.size > 2) {
-            throw UnsupportedMethodException("Method must have 1-2 parameters")
-        }
-
-        val eventType = it.parameterTypes[0]
-        val metadataType = it.parameterTypes.getOrNull(1)
-
-        return MethodParametersType(eventType, metadataType)
-    }
-
     private val RecordedEvent.effectiveEventId: String
         get() {
-            val originalEventId = objectMapper.runCatching {
+            return overriddenEventIdOrNull ?: eventId.toString()
+        }
+
+    private val RecordedEvent.overriddenEventIdOrNull: String?
+        get() {
+            return objectMapper.runCatching {
                 readTree(metadata).path(IdempotentEventHandler.OVERRIDE_EVENT_ID).textValue()
             }.getOrNull()
-
-            return originalEventId ?: eventId.toString()
         }
 
     private fun Exception.isAOrIsCausedBy(matchClass: KClass<*>): Boolean {
@@ -230,5 +237,3 @@ internal class IdempotentPersistentSubscriptionListener(
         }
     }
 }
-
-
