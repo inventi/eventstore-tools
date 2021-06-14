@@ -3,7 +3,7 @@ import org.jetbrains.kotlin.gradle.tasks.KotlinCompile
 import org.springframework.boot.gradle.plugin.SpringBootPlugin.BOOT_JAR_TASK_NAME
 
 plugins {
-    id("org.springframework.boot") version "2.3.4.RELEASE"
+    id("org.springframework.boot") version "2.5.1"
     id("io.spring.dependency-management") version "1.0.10.RELEASE"
     kotlin("jvm") version "1.5.10"
     kotlin("plugin.spring") version "1.5.10"
@@ -24,11 +24,13 @@ repositories {
 
 dependencies {
     val jacksonVersion = "2.11.3"
-    val testContainersVersion = "1.15.1"
+    val testContainersVersion = "1.15.3"
+    val micrometerVersion = "1.7.0"
 
     api("com.github.msemys:esjc:2.3.0")
-    compileOnly("org.springframework.cloud:spring-cloud-gcp-starter-trace:1.2.7.RELEASE")
-    compileOnly("io.micrometer:micrometer-registry-stackdriver:1.6.6")
+
+    compileOnly("com.google.cloud:spring-cloud-gcp-starter-trace:2.0.3")
+    compileOnly("io.micrometer:micrometer-registry-stackdriver:$micrometerVersion")
     compileOnly("org.springframework.boot:spring-boot-starter-data-redis")
 
     implementation("org.springframework.boot:spring-boot-starter")
@@ -52,7 +54,7 @@ dependencies {
         exclude(group = "org.junit.vintage", module = "junit-vintage-engine")
     }
 
-    testCompileOnly("io.micrometer:micrometer-registry-stackdriver:1.6.6")
+    testCompileOnly("io.micrometer:micrometer-registry-stackdriver:$micrometerVersion")
     testImplementation("io.mockk:mockk:1.9.3")
     testImplementation("org.testcontainers:testcontainers:$testContainersVersion")
     testImplementation("org.testcontainers:junit-jupiter:$testContainersVersion")
