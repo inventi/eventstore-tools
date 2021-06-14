@@ -71,7 +71,8 @@ tasks.named(BOOT_JAR_TASK_NAME) {
     enabled = false
 }
 
-tasks.named(JAR_TASK_NAME) {
+tasks.named<Jar>(JAR_TASK_NAME) {
+    archiveClassifier.set("") // Spring boot jar task appends -plain classifier by default
     enabled = true
 }
 
