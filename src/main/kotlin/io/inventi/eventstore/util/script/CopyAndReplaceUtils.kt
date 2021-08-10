@@ -69,10 +69,6 @@ fun withEventStore(
         objectMapper: ObjectMapper = ObjectMapperFactory.createDefaultObjectMapper(),
         block: CopyAndReplaceOperation.(eventStore: EventStore) -> Unit,
 ) {
-    if (!System.getProperty("java.version").startsWith("1.8")) {
-        throw IllegalStateException("Only Java 8 is supported. ESJC uses GSON which fails to load java.sql.Time class on Java 11.")
-    }
-
     val eventStore = EventStoreBuilder.newBuilder()
             .maxReconnections(3)
             .heartbeatTimeout(Duration.ofSeconds(10))
