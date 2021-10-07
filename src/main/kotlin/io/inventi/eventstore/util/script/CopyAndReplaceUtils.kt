@@ -60,6 +60,8 @@ data class EsConfig(
         val esPort: Int = 1113,
         val esUser: String = "admin",
         val esPass: String = "changeit",
+        val heartbeatTimeoutInSeconds: Long = 10,
+        val operationTimeoutInSeconds: Long = 60,
 )
 
 fun withEventStore(
@@ -71,8 +73,8 @@ fun withEventStore(
 ) {
     val eventStore = EventStoreBuilder.newBuilder()
             .maxReconnections(3)
-            .heartbeatTimeout(Duration.ofSeconds(10))
-            .operationTimeout(Duration.ofSeconds(60))
+            .heartbeatTimeout(Duration.ofSeconds(esConfig.heartbeatTimeoutInSeconds))
+            .operationTimeout(Duration.ofSeconds(esConfig.operationTimeoutInSeconds))
             .singleNodeAddress(InetSocketAddress.createUnresolved(esConfig.esHost, esConfig.esPort))
             .userCredentials(esConfig.esUser, esConfig.esPass)
             .build()
