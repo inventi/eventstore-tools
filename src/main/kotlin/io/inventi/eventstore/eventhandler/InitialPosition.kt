@@ -34,4 +34,14 @@ sealed class InitialPosition {
             private const val DEFAULT_START_POSITION = StreamPosition.START
         }
     }
+
+    class FromTheEndOfStream(
+        private val streamName: String,
+    ) : InitialPosition() {
+        override fun getFirstEventNumberToHandle(eventStore: EventStore, objectMapper: ObjectMapper): Long {
+            val readResult = eventStore.readEvent(streamName, StreamPosition.END, true).join()
+
+            return readResult.event.link.eventNumber
+        }
+    }
 }
