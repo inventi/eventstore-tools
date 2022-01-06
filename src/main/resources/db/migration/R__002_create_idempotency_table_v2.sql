@@ -10,24 +10,10 @@ CREATE TABLE IF NOT EXISTS ${idempotency}_v2
     created_at             timestamp
 );
 
-INSERT INTO ${idempotency}_v2
-(event_id, stream_name, group_name, event_type, event_stream_id, idempotency_classifier, created_at)
-SELECT event_id,
-       substring(idempotency_classifier, '^(.*)-' || group_name) as stream_name,
-       group_name,
-       substring(idempotency_classifier, '-([^-]*$)')            as event_type,
-       'UNKNOWN'                                                 as event_stream_id,
-       idempotency_classifier,
-       created_at
-FROM ${idempotency}
-WHERE NOT EXISTS (SELECT * FROM ${idempotency}_v2);
+ALTER TABLE IF EXISTS ${idempotency} DROP CONSTRAINT IF EXISTS fk_v2_event_id;
+DROP TABLE IF EXISTS ${idempotency};
 
-CREATE UNIQUE INDEX IF NOT EXISTS idx_${idempotency}_v2_unique_idempotency_classifier ON ${idempotency}_v2 (event_id, idempotency_classifier);
-
-ALTER TABLE ${idempotency}
-    DROP CONSTRAINT IF EXISTS fk_v2_event_id;
-
-ALTER TABLE ${idempotency}
-    ADD CONSTRAINT fk_v2_event_id FOREIGN KEY (event_id, idempotency_classifier) REFERENCES ${idempotency}_v2 (event_id, idempotency_classifier)
-        ON DELETE CASCADE;
-
+DROP INDEX IF EXISTS idx_${idempotency}_v2_unique_idempotency_classifier;
+ALTER TABLE IF EXISTS ${idempotency}_v2 DROP COLUMN IF EXISTS idempotency_classifier;
+ALTER TABLE IF EXISTS ${idempotency}_v2 RENAME CONSTRAINT ${idempotency}_v2_pkey TO eventstore_subscription_processed_event_pkey;
+ALTER TABLE IF EXISTS ${idempotency}_v2 RENAME TO eventstore_subscription_processed_event;

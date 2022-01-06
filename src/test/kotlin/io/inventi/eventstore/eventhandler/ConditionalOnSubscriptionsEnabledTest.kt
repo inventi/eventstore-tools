@@ -1,30 +1,33 @@
 package io.inventi.eventstore.eventhandler
 
 import io.inventi.eventstore.eventhandler.annotation.ConditionalOnSubscriptionsEnabled
-import org.junit.jupiter.api.Assertions.assertNull
+import org.amshove.kluent.shouldBeNull
+import org.amshove.kluent.shouldNotBeNull
 import org.junit.jupiter.api.Test
-import org.junit.jupiter.api.extension.ExtendWith
 import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.boot.test.context.SpringBootTest
-import org.springframework.boot.test.mock.mockito.MockBean
-import org.springframework.boot.test.mock.mockito.MockBeans
 import org.springframework.context.annotation.Bean
 import org.springframework.context.annotation.Configuration
-import org.springframework.test.context.junit.jupiter.SpringExtension
 
-
-@ExtendWith(SpringExtension::class)
 @SpringBootTest(properties = ["eventstore.subscriptions.enabled=false"], classes = [SomeHandlerConfiguration::class])
-@MockBeans(
-        MockBean(IdempotentEventClassifierDao::class)
-)
-class ConditionalOnSubscriptionsEnabledTest {
+class ConditionalOnSubscriptionsEnabledTrueTest {
     @Autowired
-    private var handler: IdempotentEventHandlerTest.SomeHandler? = null
+    private var handler: EventstoreEventHandler? = null
 
     @Test
     fun `does not instantiate bean if eventstore subscriptions enabled is false`() {
-        assertNull(handler)
+        handler.shouldBeNull()
+    }
+}
+
+@SpringBootTest(properties = ["eventstore.subscriptions.enabled=true"], classes = [SomeHandlerConfiguration::class])
+class ConditionalOnSubscriptionsEnabledFalseTest {
+    @Autowired
+    private var handler: EventstoreEventHandler? = null
+
+    @Test
+    fun `instantiates bean if eventstore subscriptions enabled is true`() {
+        handler.shouldNotBeNull()
     }
 }
 
@@ -32,10 +35,10 @@ class ConditionalOnSubscriptionsEnabledTest {
 class SomeHandlerConfiguration {
     @Bean
     @ConditionalOnSubscriptionsEnabled
-    fun handler(): EmptyHandler {
+    fun handler(): EventstoreEventHandler {
         return EmptyHandler()
     }
 
-    class EmptyHandler() : IdempotentEventHandler("a", "b")
+    class EmptyHandler(override val streamName: String = "", override val groupName: String = "") : EventstoreEventHandler
 }
 

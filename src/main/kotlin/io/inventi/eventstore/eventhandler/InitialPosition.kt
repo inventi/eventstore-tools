@@ -9,15 +9,15 @@ import com.github.msemys.esjc.StreamPosition
 sealed class InitialPosition {
     abstract fun getFirstEventNumberToHandle(eventStore: EventStore, objectMapper: ObjectMapper): Long
 
-    class FromBeginning : InitialPosition() {
+    object FromBeginning : InitialPosition() {
         override fun getFirstEventNumberToHandle(eventStore: EventStore, objectMapper: ObjectMapper): Long {
             return StreamPosition.START
         }
     }
 
     class TakeOverPersistentSubscription(
-            val streamName: String,
-            val groupName: String
+            private val streamName: String,
+            private val groupName: String,
     ) : InitialPosition() {
         override fun getFirstEventNumberToHandle(eventStore: EventStore, objectMapper: ObjectMapper): Long {
             val subscriptionCheckpointStream = "\$persistentsubscription-$streamName::$groupName-checkpoint"
@@ -36,7 +36,7 @@ sealed class InitialPosition {
     }
 
     class FromTheEndOfStream(
-        private val streamName: String,
+            private val streamName: String,
     ) : InitialPosition() {
         override fun getFirstEventNumberToHandle(eventStore: EventStore, objectMapper: ObjectMapper): Long {
             val readResult = eventStore.readEvent(streamName, StreamPosition.END, true).join()

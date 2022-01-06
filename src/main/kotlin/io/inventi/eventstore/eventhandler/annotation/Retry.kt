@@ -7,6 +7,5 @@ import kotlin.reflect.KClass
 @Inherited
 @Target(AnnotationTarget.FUNCTION, AnnotationTarget.ANNOTATION_CLASS)
 @Retention(AnnotationRetention.RUNTIME)
-@Repeatable
 @MustBeDocumented
 annotation class Retry(val exceptions: Array<KClass<*>>, val maxAttempts: Int = 3, val backoffDelayMillis: Long = 1000)

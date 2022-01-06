@@ -24,10 +24,10 @@ repositories {
 
 dependencies {
     val jacksonVersion = "2.11.3"
-    val testContainersVersion = "1.15.3"
+    val testContainersVersion = "1.16.2"
     val micrometerVersion = "1.7.0"
 
-    api("com.github.msemys:esjc:2.3.0")
+    api("com.github.msemys:esjc:2.4.0")
 
     compileOnly("com.google.cloud:spring-cloud-gcp-starter-trace:2.0.3")
     compileOnly("io.micrometer:micrometer-registry-stackdriver:$micrometerVersion")
@@ -36,6 +36,13 @@ dependencies {
     implementation("org.springframework.boot:spring-boot-starter")
     implementation("org.springframework.boot:spring-boot-starter-web")
     implementation("org.springframework:spring-tx")
+    implementation("org.springframework:spring-jdbc")
+
+    implementation("org.jdbi:jdbi3-core:3.27.0")
+    implementation("org.jdbi:jdbi3-kotlin:3.27.0")
+    implementation("org.jdbi:jdbi3-kotlin-sqlobject:3.27.0")
+
+    implementation("org.flywaydb:flyway-core")
 
     implementation("com.fasterxml.jackson.dataformat:jackson-dataformat-yaml:$jacksonVersion")
     implementation("com.fasterxml.jackson.module:jackson-module-kotlin:$jacksonVersion")
@@ -43,19 +50,14 @@ dependencies {
     implementation("org.jetbrains.kotlin:kotlin-reflect")
     implementation("org.jetbrains.kotlin:kotlin-stdlib-jdk8")
 
-    implementation("org.jdbi:jdbi3-core:3.8.0")
-    implementation("org.jdbi:jdbi3-kotlin:3.8.0")
-    implementation("org.jdbi:jdbi3-kotlin-sqlobject:3.8.0")
-
-    implementation("org.flywaydb:flyway-core:6.0.8")
-
     implementation("com.google.guava:guava:30.0-jre")
     implementation("org.springframework.boot:spring-boot-starter-test") {
         exclude(group = "org.junit.vintage", module = "junit-vintage-engine")
     }
 
     testCompileOnly("io.micrometer:micrometer-registry-stackdriver:$micrometerVersion")
-    testImplementation("io.mockk:mockk:1.9.3")
+    testImplementation("io.mockk:mockk:1.12.1")
+    testImplementation("org.amshove.kluent:kluent:1.68")
     testImplementation("org.testcontainers:testcontainers:$testContainersVersion")
     testImplementation("org.testcontainers:junit-jupiter:$testContainersVersion")
 }

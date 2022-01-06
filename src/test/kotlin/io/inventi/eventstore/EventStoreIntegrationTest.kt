@@ -12,7 +12,7 @@ import org.testcontainers.utility.DockerImageName
 @Testcontainers
 open class EventStoreIntegrationTest {
     @Container
-    private val eventStoreContainer = GenericContainer<Nothing>(DockerImageName.parse("eventstore/eventstore:release-5.0.0")).apply {
+    private val eventStoreContainer = GenericContainer<Nothing>(DockerImageName.parse("ghcr.io/eventstore/eventstore:21.10.0-alpha-arm64v8")).apply {
         exposedPorts = listOf(1113)
     }
 

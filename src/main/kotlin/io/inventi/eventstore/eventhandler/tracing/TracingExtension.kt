@@ -17,7 +17,7 @@ import java.lang.reflect.Method
 @ConditionalOnProperty("eventstore.tracing.enabled", matchIfMissing = true)
 class TracingExtension(
         private val tracing: Tracing,
-        private val objectMapper: ObjectMapper
+        private val objectMapper: ObjectMapper,
 ) : EventHandlerExtension {
     private val extractor = EventMetadataTraceExtractor(tracing)
 

@@ -48,7 +48,7 @@ class ProjectionsProperties {
 @Component
 class ProjectionInit(
         private val builder: RestTemplateBuilder,
-        private val eventstore: EventStoreInitConfig
+        private val eventstore: EventStoreInitConfig,
 ) {
 
     val version_prefix = "//version:"
