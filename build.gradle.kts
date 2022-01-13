@@ -37,6 +37,7 @@ dependencies {
     implementation("org.springframework.boot:spring-boot-starter-web")
     implementation("org.springframework:spring-tx")
     implementation("org.springframework:spring-jdbc")
+    implementation("org.springframework.integration:spring-integration-jdbc")
 
     implementation("org.jdbi:jdbi3-core:3.27.0")
     implementation("org.jdbi:jdbi3-kotlin:3.27.0")

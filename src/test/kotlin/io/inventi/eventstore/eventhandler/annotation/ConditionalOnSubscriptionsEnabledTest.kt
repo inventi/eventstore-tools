@@ -1,6 +1,6 @@
-package io.inventi.eventstore.eventhandler
+package io.inventi.eventstore.eventhandler.annotation
 
-import io.inventi.eventstore.eventhandler.annotation.ConditionalOnSubscriptionsEnabled
+import io.inventi.eventstore.eventhandler.EventstoreEventHandler
 import org.amshove.kluent.shouldBeNull
 import org.amshove.kluent.shouldNotBeNull
 import org.junit.jupiter.api.Test

@@ -10,8 +10,8 @@ interface SubscriptionCheckpointDao {
     @SqlUpdate(INSERT_CATCHUP_SUBSCRIPTON)
     fun createIfNotExists(@BindBean checkpoint: SubscriptionCheckpoint)
 
-    @SqlUpdate(SET_CHECKPOINT)
-    fun setCheckpoint(@Bind("groupName") groupName: String, @Bind("streamName") streamName: String, @Bind("checkpoint") checkpoint: Long)
+    @SqlUpdate(INCREMENT_CHECKPOINT)
+    fun incrementCheckpoint(@Bind("groupName") groupName: String, @Bind("streamName") streamName: String, @Bind("checkpoint") checkpoint: Long): Int
 
     @SqlQuery(GET_CURRENT_CHECKPOINT)
     fun currentCheckpoint(@Bind("groupName") groupName: String, @Bind("streamName") streamName: String): Long?
@@ -35,10 +35,10 @@ interface SubscriptionCheckpointDao {
         """
 
         @Language("SQL")
-        private const val SET_CHECKPOINT = """
+        private const val INCREMENT_CHECKPOINT = """
             UPDATE $TABLE_NAME
                SET checkpoint = :checkpoint
-            WHERE group_name = :groupName AND stream_name = :streamName
+            WHERE group_name = :groupName AND stream_name = :streamName AND coalesce(checkpoint, -1) < :checkpoint
         """
 
         @Language("SQL")

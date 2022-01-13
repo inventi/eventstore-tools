@@ -9,8 +9,8 @@ import io.inventi.eventstore.eventhandler.EventstoreEventListener.FailureType.EV
 import io.inventi.eventstore.eventhandler.EventstoreEventListener.FailureType.UNEXPECTED_ERROR
 import io.inventi.eventstore.eventhandler.annotation.EventHandler
 import io.inventi.eventstore.eventhandler.exception.UnsupportedMethodException
-import io.inventi.eventstore.eventhandler.features.CompositeFeature
-import io.inventi.eventstore.eventhandler.features.EventListenerFeature
+import io.inventi.eventstore.eventhandler.feature.CompositeFeature
+import io.inventi.eventstore.eventhandler.feature.EventListenerFeature
 import io.inventi.eventstore.eventhandler.model.EventIds
 import io.inventi.eventstore.eventhandler.util.overriddenEventIdOrNull
 import io.inventi.eventstore.eventhandler.util.withRetries

@@ -1,4 +1,4 @@
-package io.inventi.eventstore.eventhandler.features
+package io.inventi.eventstore.eventhandler.feature
 
 import com.github.msemys.esjc.RecordedEvent
 

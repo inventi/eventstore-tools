@@ -1,5 +1,6 @@
-package io.inventi.eventstore.eventhandler
+package io.inventi.eventstore
 
+import io.inventi.eventstore.eventhandler.EventstoreEventHandler
 import io.inventi.eventstore.eventhandler.EventstoreEventListener.FailureType
 import io.inventi.eventstore.util.LoggerDelegate
 import org.springframework.beans.factory.InitializingBean
@@ -13,7 +14,7 @@ abstract class Subscriptions<T : EventstoreEventHandler>(
         startSubscriptions()
     }
 
-    private fun startSubscriptions() {
+    protected open fun startSubscriptions() {
         handlers.forEach {
             ensureSubscription(it)
             startSubscription(it, onSubscriptionFailure(it))

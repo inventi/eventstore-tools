@@ -7,8 +7,9 @@ import com.github.msemys.esjc.PersistentSubscriptionSettings
 import io.inventi.eventstore.eventhandler.EventstoreEventListener.FailureType
 import io.inventi.eventstore.eventhandler.annotation.ConditionalOnSubscriptionsEnabled
 import io.inventi.eventstore.eventhandler.config.SubscriptionProperties
-import io.inventi.eventstore.eventhandler.features.EventIdempotency
-import io.inventi.eventstore.eventhandler.features.InTransaction
+import io.inventi.eventstore.eventhandler.feature.EventIdempotency
+import io.inventi.eventstore.eventhandler.feature.InTransaction
+import io.inventi.eventstore.Subscriptions
 import org.springframework.stereotype.Component
 import org.springframework.transaction.support.TransactionTemplate
 import java.time.Duration
