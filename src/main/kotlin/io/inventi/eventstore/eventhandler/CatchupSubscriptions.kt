@@ -4,6 +4,7 @@ import com.fasterxml.jackson.databind.ObjectMapper
 import com.github.msemys.esjc.CatchUpSubscription
 import com.github.msemys.esjc.CatchUpSubscriptionSettings
 import com.github.msemys.esjc.EventStore
+import io.inventi.eventstore.Subscriptions
 import io.inventi.eventstore.eventhandler.annotation.ConditionalOnSubscriptionsEnabled
 import io.inventi.eventstore.eventhandler.config.SubscriptionProperties
 import io.inventi.eventstore.eventhandler.dao.SubscriptionCheckpoint
@@ -11,7 +12,7 @@ import io.inventi.eventstore.eventhandler.dao.SubscriptionCheckpointDao
 import io.inventi.eventstore.eventhandler.feature.EventIdempotency
 import io.inventi.eventstore.eventhandler.feature.InTransaction
 import io.inventi.eventstore.eventhandler.feature.StoreCheckpoint
-import io.inventi.eventstore.Subscriptions
+import org.springframework.boot.autoconfigure.condition.ConditionalOnBean
 import org.springframework.context.event.EventListener
 import org.springframework.integration.leader.event.OnGrantedEvent
 import org.springframework.integration.leader.event.OnRevokedEvent
@@ -20,6 +21,7 @@ import org.springframework.transaction.support.TransactionTemplate
 
 @Component
 @ConditionalOnSubscriptionsEnabled
+@ConditionalOnBean(CatchupSubscriptionHandler::class)
 class CatchupSubscriptions(
         handlers: List<CatchupSubscriptionHandler>,
         private val eventStore: EventStore,
@@ -38,7 +40,11 @@ class CatchupSubscriptions(
     }
 
     override fun ensureSubscription(handler: CatchupSubscriptionHandler) {
-        subscriptionCheckpointDao.createIfNotExists(SubscriptionCheckpoint(handler.groupName, handler.streamName))
+        val checkpoint = handler.initialPosition.startSubscriptionFrom(eventStore, objectMapper)
+                .let { it - 1 } // -1 because catch-up subscription start event numbers are exclusive
+                .takeUnless { it < 0 } // use null instead of -1 to indicate the start of the stream
+
+        subscriptionCheckpointDao.createIfNotExists(SubscriptionCheckpoint(handler.groupName, handler.streamName, checkpoint))
     }
 
     override fun startSubscription(handler: CatchupSubscriptionHandler, onFailure: (EventstoreEventListener.FailureType) -> Unit) {
@@ -50,7 +56,7 @@ class CatchupSubscriptions(
         val listener = CatchupSubscriptionEventListener(
                 EventstoreEventListener(
                         handler,
-                        handler.initialPosition.getFirstEventNumberToHandle(eventStore, objectMapper),
+                        handler.initialPosition.replayEventsUntil(eventStore, objectMapper),
                         objectMapper,
                         EventIdempotency(handler, idempotencyStorage),
                         StoreCheckpoint(handler, subscriptionCheckpointDao),

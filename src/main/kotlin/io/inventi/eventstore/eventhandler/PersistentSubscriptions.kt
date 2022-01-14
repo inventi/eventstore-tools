@@ -4,12 +4,13 @@ import com.fasterxml.jackson.databind.ObjectMapper
 import com.github.msemys.esjc.EventStore
 import com.github.msemys.esjc.PersistentSubscriptionCreateStatus
 import com.github.msemys.esjc.PersistentSubscriptionSettings
+import io.inventi.eventstore.Subscriptions
 import io.inventi.eventstore.eventhandler.EventstoreEventListener.FailureType
 import io.inventi.eventstore.eventhandler.annotation.ConditionalOnSubscriptionsEnabled
 import io.inventi.eventstore.eventhandler.config.SubscriptionProperties
 import io.inventi.eventstore.eventhandler.feature.EventIdempotency
 import io.inventi.eventstore.eventhandler.feature.InTransaction
-import io.inventi.eventstore.Subscriptions
+import org.springframework.boot.autoconfigure.condition.ConditionalOnBean
 import org.springframework.stereotype.Component
 import org.springframework.transaction.support.TransactionTemplate
 import java.time.Duration
@@ -17,6 +18,7 @@ import java.util.concurrent.CompletionException
 
 @Component
 @ConditionalOnSubscriptionsEnabled
+@ConditionalOnBean(PersistentSubscriptionHandler::class)
 class PersistentSubscriptions(
         handlers: List<PersistentSubscriptionHandler>,
         private val eventStore: EventStore,
@@ -30,7 +32,7 @@ class PersistentSubscriptions(
         val listener = PersistentSubscriptionEventListener(
                 EventstoreEventListener(
                         handler,
-                        handler.initialPosition.getFirstEventNumberToHandle(eventStore, objectMapper),
+                        handler.initialPosition.replayEventsUntil(eventStore, objectMapper),
                         objectMapper,
                         EventIdempotency(handler, idempotencyStorage),
                         InTransaction(transactionTemplate),
@@ -44,7 +46,7 @@ class PersistentSubscriptions(
     override fun ensureSubscription(handler: PersistentSubscriptionHandler) {
         val settings = PersistentSubscriptionSettings.newBuilder()
                 .resolveLinkTos(true)
-                .startFromBeginning()
+                .startFrom(handler.initialPosition.startSubscriptionFrom(eventStore, objectMapper))
                 .minCheckPointCount(subscriptionProperties.minCheckpointCount)
                 .maxRetryCount(subscriptionProperties.maxRetryCount)
                 .messageTimeout(Duration.ofMillis(subscriptionProperties.messageTimeoutMillis))
