@@ -40,7 +40,7 @@ class PersistentSubscriptions(
                 onFailure,
         )
 
-        eventStore.subscribeToPersistent(handler.streamName, handler.groupName, listener)
+        eventStore.subscribeToPersistent(handler.streamName, handler.groupName, listener).join()
     }
 
     override fun ensureSubscription(handler: PersistentSubscriptionHandler) {
