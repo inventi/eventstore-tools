@@ -12,6 +12,7 @@ import io.inventi.eventstore.eventhandler.exception.UnsupportedMethodException
 import io.inventi.eventstore.eventhandler.feature.CompositeFeature
 import io.inventi.eventstore.eventhandler.feature.EventListenerFeature
 import io.inventi.eventstore.eventhandler.model.EventIds
+import io.inventi.eventstore.eventhandler.util.isAOrIsCausedBy
 import io.inventi.eventstore.eventhandler.util.overriddenEventIdOrNull
 import io.inventi.eventstore.eventhandler.util.withRetries
 import org.slf4j.LoggerFactory
@@ -57,7 +58,7 @@ class EventstoreEventListener(
 
     fun onClose(reason: SubscriptionDropReason, exception: Exception?): FailureType {
         logger.error("Subscription for event handler: ${eventHandler::class.simpleName} was closed. Reason: $reason", exception)
-        return if (exception is EventStoreException || RECOVERABLE_SUBSCRIPTION_DROP_REASONS.contains(reason)) {
+        return if (exception.isAOrIsCausedBy(EventStoreException::class) || RECOVERABLE_SUBSCRIPTION_DROP_REASONS.contains(reason)) {
             EVENTSTORE_CLIENT_ERROR
         } else {
             UNEXPECTED_ERROR

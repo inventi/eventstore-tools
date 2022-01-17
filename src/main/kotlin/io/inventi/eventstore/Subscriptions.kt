@@ -5,9 +5,7 @@ import io.inventi.eventstore.eventhandler.EventstoreEventListener.FailureType
 import io.inventi.eventstore.util.LoggerDelegate
 import org.springframework.beans.factory.InitializingBean
 
-abstract class Subscriptions<T : EventstoreEventHandler>(
-        protected val handlers: List<T>,
-) : InitializingBean {
+abstract class Subscriptions<T : EventstoreEventHandler>(private val handlers: List<T>) : InitializingBean {
     protected val logger by LoggerDelegate()
 
     override fun afterPropertiesSet() {

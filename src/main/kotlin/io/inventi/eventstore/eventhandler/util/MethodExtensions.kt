@@ -42,15 +42,3 @@ private fun Method.invokeWithRetries(logger: Logger, invokeMethod: Method.() -> 
     }
     throw RuntimeException(caughtRetryableException)
 }
-
-private fun Exception.isAOrIsCausedBy(matchClass: KClass<*>): Boolean {
-    var exception: Throwable? = this
-    while (exception != null) {
-        if (exception::class.isSubclassOf(matchClass)) {
-            return true
-        }
-        exception = exception.cause
-    }
-
-    return false
-}
