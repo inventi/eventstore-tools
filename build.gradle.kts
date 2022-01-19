@@ -35,8 +35,6 @@ dependencies {
 
     implementation("org.springframework.boot:spring-boot-starter")
     implementation("org.springframework.boot:spring-boot-starter-web")
-    implementation("org.springframework:spring-tx")
-    implementation("org.springframework:spring-jdbc")
     implementation("org.springframework.integration:spring-integration-jdbc")
 
     implementation("org.jdbi:jdbi3-core:3.27.0")
@@ -55,12 +53,15 @@ dependencies {
     implementation("org.springframework.boot:spring-boot-starter-test") {
         exclude(group = "org.junit.vintage", module = "junit-vintage-engine")
     }
+    implementation("org.springframework.boot:spring-boot-starter-jdbc")
 
     testCompileOnly("io.micrometer:micrometer-registry-stackdriver:$micrometerVersion")
-    testImplementation("io.mockk:mockk:1.12.1")
+    testImplementation("io.mockk:mockk:1.12.2")
     testImplementation("org.amshove.kluent:kluent:1.68")
-    testImplementation("org.testcontainers:testcontainers:$testContainersVersion")
+//    testImplementation("org.testcontainers:testcontainers:$testContainersVersion")
     testImplementation("org.testcontainers:junit-jupiter:$testContainersVersion")
+    testImplementation("org.testcontainers:postgresql:$testContainersVersion")
+    testImplementation("org.postgresql:postgresql:42.3.1")
 }
 
 tasks.withType<KotlinCompile> {

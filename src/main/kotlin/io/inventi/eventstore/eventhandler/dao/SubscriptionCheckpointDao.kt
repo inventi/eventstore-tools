@@ -8,13 +8,16 @@ import org.jdbi.v3.sqlobject.statement.SqlUpdate
 
 interface SubscriptionCheckpointDao {
     @SqlUpdate(INSERT_CATCHUP_SUBSCRIPTON)
-    fun createIfNotExists(@BindBean checkpoint: SubscriptionCheckpoint)
+    fun createIfNotExists(@BindBean checkpoint: SubscriptionCheckpoint): Int
 
     @SqlUpdate(INCREMENT_CHECKPOINT)
     fun incrementCheckpoint(@Bind("groupName") groupName: String, @Bind("streamName") streamName: String, @Bind("checkpoint") checkpoint: Long): Int
 
-    @SqlQuery(GET_CURRENT_CHECKPOINT)
+    @SqlQuery(SELECT_CURRENT_CHECKPOINT)
     fun currentCheckpoint(@Bind("groupName") groupName: String, @Bind("streamName") streamName: String): Long?
+
+    @SqlUpdate(DELETE_CHECKPOINT)
+    fun delete(@Bind("groupName") groupName: String, @Bind("streamName") streamName: String): Int
 
     companion object {
         private const val TABLE_NAME = "eventstore_subscription_checkpoint"
@@ -42,8 +45,15 @@ interface SubscriptionCheckpointDao {
         """
 
         @Language("SQL")
-        private const val GET_CURRENT_CHECKPOINT = """
+        private const val SELECT_CURRENT_CHECKPOINT = """
             SELECT checkpoint
+            FROM $TABLE_NAME
+            WHERE group_name = :groupName AND stream_name = :streamName
+        """
+
+        @Language("SQL")
+        private const val DELETE_CHECKPOINT = """
+            DELETE
             FROM $TABLE_NAME
             WHERE group_name = :groupName AND stream_name = :streamName
         """

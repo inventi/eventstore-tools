@@ -98,7 +98,9 @@ class CatchupSubscriptions(
                 onFailure,
         )
 
-        subscriptionsByHandler.getValue(handler).update(eventStore.subscribeToStreamFrom(handler.streamName, checkpoint, settings, listener))
+        subscriptionsByHandler
+                .getValue(handler)
+                .update(eventStore.subscribeToStreamFrom(handler.streamName, checkpoint, settings, listener))
     }
 
     @EventListener

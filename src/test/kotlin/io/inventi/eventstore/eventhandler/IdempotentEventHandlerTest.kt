@@ -5,8 +5,8 @@
 //import com.github.msemys.esjc.EventStore
 //import io.inventi.eventstore.EventStoreIntegrationTest
 //import io.inventi.eventstore.eventhandler.annotation.EventHandler
-//import io.inventi.eventstore.eventhandler.events.a.EventA
-//import io.inventi.eventstore.eventhandler.events.b.EventB
+//import io.inventi.eventstore.eventhandler.events.EventA
+//import io.inventi.eventstore.eventhandler.events.EventB
 //import io.inventi.eventstore.eventhandler.util.ExecutingTransactionTemplate
 //import io.inventi.eventstore.util.ObjectMapperFactory
 //import org.junit.jupiter.api.BeforeAll

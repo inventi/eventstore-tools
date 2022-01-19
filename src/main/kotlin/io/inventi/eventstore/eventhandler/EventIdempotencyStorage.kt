@@ -8,12 +8,14 @@ import io.inventi.eventstore.eventhandler.dao.ProcessedEventDao
 import io.inventi.eventstore.eventhandler.exception.EventAlreadyHandledException
 import io.inventi.eventstore.eventhandler.util.effectiveEventId
 import org.springframework.stereotype.Component
+import java.time.Instant
 
 @Component
 @ConditionalOnSubscriptionsEnabled
 class EventIdempotencyStorage(
         private val processedEventDao: ProcessedEventDao,
         private val objectMapper: ObjectMapper,
+        private val now: () -> Instant = { Instant.now() }
 ) {
     fun storeRecord(streamName: String, groupName: String, event: RecordedEvent) {
         val idempotentEventRecord = ProcessedEvent(
@@ -21,7 +23,8 @@ class EventIdempotencyStorage(
                 eventType = event.eventType,
                 streamName = streamName,
                 eventStreamId = event.eventStreamId,
-                groupName = groupName
+                groupName = groupName,
+                createdAt = now(),
         )
         val affectedRows = processedEventDao.save(idempotentEventRecord)
         if (affectedRows == 0) {
