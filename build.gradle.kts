@@ -29,9 +29,10 @@ dependencies {
 
     api("com.github.msemys:esjc:2.4.0")
 
-    compileOnly("com.google.cloud:spring-cloud-gcp-starter-trace:2.0.3")
-    compileOnly("io.micrometer:micrometer-registry-stackdriver:$micrometerVersion")
     compileOnly("org.springframework.boot:spring-boot-starter-data-redis")
+
+    implementation("io.zipkin.brave:brave:5.13.2")
+    implementation("io.micrometer:micrometer-core:1.7.0")
 
     implementation("org.springframework.boot:spring-boot-starter")
     implementation("org.springframework.boot:spring-boot-starter-web")
@@ -55,10 +56,9 @@ dependencies {
     }
     implementation("org.springframework.boot:spring-boot-starter-jdbc")
 
-    testCompileOnly("io.micrometer:micrometer-registry-stackdriver:$micrometerVersion")
     testImplementation("io.mockk:mockk:1.12.2")
+    testImplementation("org.awaitility:awaitility:4.1.1")
     testImplementation("org.amshove.kluent:kluent:1.68")
-//    testImplementation("org.testcontainers:testcontainers:$testContainersVersion")
     testImplementation("org.testcontainers:junit-jupiter:$testContainersVersion")
     testImplementation("org.testcontainers:postgresql:$testContainersVersion")
     testImplementation("org.postgresql:postgresql:42.3.1")

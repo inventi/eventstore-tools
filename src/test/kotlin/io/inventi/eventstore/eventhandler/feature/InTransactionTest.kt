@@ -1,6 +1,6 @@
 package io.inventi.eventstore.eventhandler.feature
 
-import io.inventi.eventstore.eventhandler.EventstoreToolsTestConfiguration
+import io.inventi.eventstore.EventStoreToolsDBConfiguration
 import io.inventi.eventstore.eventhandler.dao.SubscriptionCheckpoint
 import io.inventi.eventstore.eventhandler.dao.SubscriptionCheckpointDao
 import io.mockk.mockk
@@ -15,7 +15,7 @@ import org.springframework.boot.test.context.SpringBootTest
 import org.springframework.test.context.ActiveProfiles
 import org.springframework.transaction.support.TransactionTemplate
 
-@SpringBootTest(classes = [EventstoreToolsTestConfiguration::class])
+@SpringBootTest(classes = [EventStoreToolsDBConfiguration::class])
 @ActiveProfiles("test")
 class InTransactionTest {
     private val groupName = "groupName"

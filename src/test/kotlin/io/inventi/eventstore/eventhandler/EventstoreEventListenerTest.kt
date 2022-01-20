@@ -9,16 +9,16 @@ import io.inventi.eventstore.eventhandler.annotation.EventHandler
 import io.inventi.eventstore.eventhandler.annotation.Retry
 import io.inventi.eventstore.eventhandler.events.EventType
 import io.inventi.eventstore.eventhandler.events.IrrelevantEvent
-import io.inventi.eventstore.eventhandler.events.TestEvent
 import io.inventi.eventstore.eventhandler.events.TestMetadata
 import io.inventi.eventstore.eventhandler.feature.EventListenerFeature
 import io.inventi.eventstore.eventhandler.model.EventIds
 import io.inventi.eventstore.eventhandler.util.DataBuilder
 import io.inventi.eventstore.eventhandler.util.DataBuilder.event
-import io.inventi.eventstore.eventhandler.util.DataBuilder.eventIds
+import io.inventi.eventstore.eventhandler.util.DataBuilder.overridenEventIds
 import io.inventi.eventstore.eventhandler.util.DataBuilder.metadata
 import io.inventi.eventstore.eventhandler.util.DataBuilder.resolvedEvent
 import io.inventi.eventstore.eventhandler.util.DataBuilder.resolvedEventWithMetadata
+import io.inventi.eventstore.eventhandler.util.Handler
 import io.inventi.eventstore.util.ObjectMapperFactory
 import io.mockk.andThenJust
 import io.mockk.called
@@ -187,7 +187,7 @@ class EventstoreEventListenerTest {
 
         // then
         verify(exactly = 1) {
-            handler.handle(event(), eventIds = eventIds())
+            handler.handle(event(), eventIds = overridenEventIds())
         }
     }
 
@@ -201,7 +201,7 @@ class EventstoreEventListenerTest {
 
         // then
         verify(exactly = 1) {
-            handler.handle(event(), metadata(), eventIds())
+            handler.handle(event(), metadata(), overridenEventIds())
         }
     }
 
@@ -215,7 +215,7 @@ class EventstoreEventListenerTest {
 
         // then
         verify(exactly = 1) {
-            handler.handle(event(), metadata(), eventIds())
+            handler.handle(event(), metadata(), overridenEventIds())
         }
     }
 
@@ -381,10 +381,6 @@ class EventstoreEventListenerTest {
             block()
         }
     })
-
-    private interface Handler {
-        fun handle(event: TestEvent, metadata: TestMetadata? = null, eventIds: EventIds? = null)
-    }
 
     private class HandlerException : RuntimeException()
 

@@ -7,6 +7,17 @@ spring:
     placeholders:
       idempotency: eventstore_tools
 
+
+logging:
+  level:
+    io.inventi: TRACE
+    com.github.msemys.esjc.EventStore: TRACE
+    com.github.msemys.esjc.subscription.manager.SubscriptionManager: TRACE
+
 eventstore:
+  username: admin
+  password: changeit
+  endpoint: http://localhost:2113
   subscriptions:
     enabled: true
+    enableCatchupSubscriptionLeaderElection: true

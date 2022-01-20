@@ -1,6 +1,6 @@
 package io.inventi.eventstore.eventhandler.dao
 
-import io.inventi.eventstore.eventhandler.EventstoreToolsTestConfiguration
+import io.inventi.eventstore.EventStoreToolsDBConfiguration
 import io.inventi.eventstore.eventhandler.util.DataBuilder.processedEvent
 import org.amshove.kluent.shouldBeEqualTo
 import org.junit.jupiter.api.Test
@@ -9,7 +9,7 @@ import org.springframework.boot.test.context.SpringBootTest
 import org.springframework.test.context.ActiveProfiles
 import org.springframework.transaction.annotation.Transactional
 
-@SpringBootTest(classes = [EventstoreToolsTestConfiguration::class])
+@SpringBootTest(classes = [EventStoreToolsDBConfiguration::class])
 @ActiveProfiles("test")
 @Transactional
 class ProcessedEventDaoTest {

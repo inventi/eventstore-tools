@@ -12,4 +12,3 @@ import java.lang.annotation.Inherited
 @Target(AnnotationTarget.CLASS, AnnotationTarget.FUNCTION)
 @Retention(AnnotationRetention.RUNTIME)
 annotation class IfCatchupSubscriptionLeaderElectionEnabled
-

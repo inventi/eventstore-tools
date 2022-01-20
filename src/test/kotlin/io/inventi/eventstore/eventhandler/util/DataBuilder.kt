@@ -20,8 +20,8 @@ object DataBuilder {
     private val objectMapper = ObjectMapperFactory.createDefaultObjectMapper()
 
     val createdAt: Instant = Instant.parse("2022-01-01T00:00:00Z")
-    const val eventId = "11111111-1111-1111-1111-111111111111"
-    const val overridenEventId = "00000000-0000-0000-0000-000000000000"
+    const val eventId = "22222222-2222-2222-2222-222222222222"
+    const val overridenEventId = "11111111-1111-1111-1111-111111111111"
     const val streamName = "StreamName"
     const val eventStreamId = "EventStreamId"
     const val groupName = "GroupName"
@@ -31,13 +31,15 @@ object DataBuilder {
     fun event() = EventType("random-value")
 
     fun metadata() = TestMetadata(
-            overrideEventId = "00000000-0000-0000-0000-000000000000",
+            overrideEventId = "11111111-1111-1111-1111-111111111111",
             overrideEventNumber = "0",
             transformedFromEventNumber = 0,
-            transformedFromJavaEventId = "00000000-0000-0000-0000-000000000000"
+            transformedFromJavaEventId = "11111111-1111-1111-1111-111111111111"
     )
 
-    fun eventIds() = EventIds(overridenEventId, eventId)
+    fun eventIds(id: String = eventId) = EventIds(null, id)
+
+    fun overridenEventIds() = EventIds(overridenEventId, eventId)
 
     fun resolvedEvent(): ResolvedEvent = buildResolvedEvent()
 

@@ -1,6 +1,5 @@
 package io.inventi.eventstore.eventhandler.annotation
 
-import io.inventi.eventstore.eventhandler.EventstoreEventHandler
 import org.amshove.kluent.shouldBeNull
 import org.amshove.kluent.shouldNotBeNull
 import org.junit.jupiter.api.Test
@@ -9,36 +8,36 @@ import org.springframework.boot.test.context.SpringBootTest
 import org.springframework.context.annotation.Bean
 import org.springframework.context.annotation.Configuration
 
-@SpringBootTest(properties = ["eventstore.subscriptions.enabled=false"], classes = [SomeHandlerConfiguration::class])
+@SpringBootTest(properties = ["eventstore.subscriptions.enabled=false"], classes = [ConditionalOnSubscriptionsEnabledConfig::class])
 class ConditionalOnSubscriptionsEnabledTrueTest {
     @Autowired
-    private var handler: EventstoreEventHandler? = null
+    private var injectedBean: ConditionalOnSubscriptionsEnabledConfig.ConditionalOnSubscriptionsEnabledBean? = null
 
     @Test
     fun `does not instantiate bean if eventstore subscriptions enabled is false`() {
-        handler.shouldBeNull()
+        injectedBean.shouldBeNull()
     }
 }
 
-@SpringBootTest(properties = ["eventstore.subscriptions.enabled=true"], classes = [SomeHandlerConfiguration::class])
+@SpringBootTest(properties = ["eventstore.subscriptions.enabled=true"], classes = [ConditionalOnSubscriptionsEnabledConfig::class])
 class ConditionalOnSubscriptionsEnabledFalseTest {
     @Autowired
-    private var handler: EventstoreEventHandler? = null
+    private var injectedBean: ConditionalOnSubscriptionsEnabledConfig.ConditionalOnSubscriptionsEnabledBean? = null
 
     @Test
     fun `instantiates bean if eventstore subscriptions enabled is true`() {
-        handler.shouldNotBeNull()
+        injectedBean.shouldNotBeNull()
     }
 }
 
 @Configuration
-class SomeHandlerConfiguration {
+class ConditionalOnSubscriptionsEnabledConfig {
     @Bean
     @ConditionalOnSubscriptionsEnabled
-    fun handler(): EventstoreEventHandler {
-        return EmptyHandler()
+    fun conditionalOnSubscriptionsEnabledBean(): ConditionalOnSubscriptionsEnabledBean {
+        return ConditionalOnSubscriptionsEnabledBean()
     }
 
-    class EmptyHandler(override val streamName: String = "", override val groupName: String = "") : EventstoreEventHandler
+    class ConditionalOnSubscriptionsEnabledBean
 }
 

@@ -1,6 +1,7 @@
 package io.inventi.eventstore.aggregate
 
 import com.github.msemys.esjc.EventStore
+import com.github.msemys.esjc.EventStoreBuilder
 import io.inventi.eventstore.EventStoreIntegrationTest
 import io.inventi.eventstore.aggregate.metadata.EmptyMetadataSource
 import io.inventi.eventstore.aggregate.metadata.MetadataSource
@@ -13,6 +14,11 @@ import kotlin.reflect.KClass
 class SomeAggregateRoot(id: String) : AggregateRoot(id)
 
 class RepositoryTest : EventStoreIntegrationTest() {
+    private var eventStore: EventStore = EventStoreBuilder.newBuilder()
+            .singleNodeAddress(eventStoreContainer.host, eventStoreContainer.firstMappedPort)
+            .userCredentials("admin", "changeit")
+            .maxReconnections(1)
+            .build()
 
     @Test
     fun `throws exception when there are newer events in the stream`() {
