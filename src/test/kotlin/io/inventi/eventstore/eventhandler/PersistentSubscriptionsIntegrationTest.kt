@@ -5,7 +5,6 @@ import io.inventi.eventstore.EventStoreIntegrationTest
 import io.inventi.eventstore.EventStoreToolsSubscriptionsConfiguration
 import io.inventi.eventstore.eventhandler.annotation.EventHandler
 import io.inventi.eventstore.eventhandler.dao.ProcessedEventDao
-import io.inventi.eventstore.eventhandler.dao.SubscriptionCheckpointDao
 import io.inventi.eventstore.eventhandler.events.EventType
 import io.inventi.eventstore.eventhandler.model.EventIds
 import io.inventi.eventstore.eventhandler.util.DataBuilder
@@ -20,7 +19,6 @@ import io.inventi.eventstore.eventhandler.util.Handler
 import io.inventi.eventstore.eventhandler.util.WithAsyncHandlerAssertions
 import io.inventi.eventstore.eventhandler.util.WithEventstoreOperations
 import io.mockk.mockk
-import org.amshove.kluent.shouldBeEqualTo
 import org.amshove.kluent.shouldNotBeNull
 import org.junit.jupiter.api.Test
 import org.springframework.beans.factory.annotation.Autowired
@@ -33,13 +31,10 @@ import org.springframework.test.context.ActiveProfiles
 import java.util.UUID
 
 @SpringBootTest(classes = [EventStoreToolsSubscriptionsConfiguration::class])
-@Import(CatchupSubscriptionsTest.Config::class)
+@Import(PersistentSubscriptionsIntegrationTest.Config::class)
 @ActiveProfiles("test")
 @DirtiesContext // ensures that eventStore bean is not reused, because each bean has a different test container port
-class CatchupSubscriptionsTest : EventStoreIntegrationTest(), WithAsyncHandlerAssertions, WithEventstoreOperations {
-    @Autowired
-    private lateinit var checkpointDao: SubscriptionCheckpointDao
-
+class PersistentSubscriptionsIntegrationTest : EventStoreIntegrationTest(), WithAsyncHandlerAssertions, WithEventstoreOperations {
     @Autowired
     private lateinit var processedEventDao: ProcessedEventDao
 
@@ -78,20 +73,6 @@ class CatchupSubscriptionsTest : EventStoreIntegrationTest(), WithAsyncHandlerAs
     }
 
     @Test
-    fun `stores checkpoint`() {
-        // given
-        val eventId = UUID.randomUUID().toString()
-        val checkpointBeforeEvent = checkpointDao.currentCheckpoint(groupName, streamName)!!
-
-        // when
-        appendEvent(event(), eventId)
-        waitUntilEventIsHandled(eventId)
-
-        // then
-        checkpointDao.currentCheckpoint(groupName, streamName) shouldBeEqualTo checkpointBeforeEvent + 1
-    }
-
-    @Test
     fun `stores processed event`() {
         // given
         val eventId = UUID.randomUUID().toString()
@@ -110,14 +91,14 @@ class CatchupSubscriptionsTest : EventStoreIntegrationTest(), WithAsyncHandlerAs
         fun testHandler(): Handler = mockk(relaxed = true)
 
         @Bean
-        fun catchupSubscriptionHandler(handler: Handler) = TestCatchupSubscriptionHandler(handler = handler)
+        fun persistentSubscriptionHandler(handler: Handler) = TestPersistentSubscriptionHandler(handler = handler)
     }
 
-    class TestCatchupSubscriptionHandler(
+    class TestPersistentSubscriptionHandler(
             override val streamName: String = DataBuilder.streamName,
             override val groupName: String = DataBuilder.groupName,
             private val handler: Handler,
-    ) : CatchupSubscriptionHandler {
+    ) : PersistentSubscriptionHandler {
         @EventHandler
         fun onEvent(event: EventType, eventIds: EventIds) {
             handler.handle(event, eventIds = eventIds)

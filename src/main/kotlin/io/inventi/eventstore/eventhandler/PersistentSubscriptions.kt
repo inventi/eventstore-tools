@@ -40,7 +40,11 @@ class PersistentSubscriptions(
                 onFailure,
         )
 
-        eventStore.subscribeToPersistent(handler.streamName, handler.groupName, listener).join()
+        eventStore.subscribeToPersistent(handler.streamName, handler.groupName, listener).exceptionally { exception ->
+            logger.error("Failed to start persistent subscription for handler: ${handler::class.simpleName}", exception)
+            onFailure(FailureType.EVENTSTORE_CLIENT_ERROR)
+            null
+        }.join()
     }
 
     override fun ensureSubscription(handler: PersistentSubscriptionHandler) {

@@ -1,107 +1,57 @@
 package io.inventi.eventstore.eventhandler
 
 import com.github.msemys.esjc.EventStore
-import io.inventi.eventstore.EventStoreIntegrationTest
-import io.inventi.eventstore.EventStoreToolsSubscriptionsConfiguration
-import io.inventi.eventstore.eventhandler.annotation.EventHandler
-import io.inventi.eventstore.eventhandler.dao.ProcessedEventDao
-import io.inventi.eventstore.eventhandler.events.EventType
-import io.inventi.eventstore.eventhandler.model.EventIds
+import com.github.msemys.esjc.PersistentSubscriptionCreateResult
+import com.github.msemys.esjc.PersistentSubscriptionCreateStatus
+import com.github.msemys.esjc.PersistentSubscriptionSettings
+import io.inventi.eventstore.eventhandler.config.SubscriptionProperties
 import io.inventi.eventstore.eventhandler.util.DataBuilder
-import io.inventi.eventstore.eventhandler.util.DataBuilder.event
-import io.inventi.eventstore.eventhandler.util.DataBuilder.eventId
-import io.inventi.eventstore.eventhandler.util.DataBuilder.eventType
 import io.inventi.eventstore.eventhandler.util.DataBuilder.groupName
-import io.inventi.eventstore.eventhandler.util.DataBuilder.metadata
-import io.inventi.eventstore.eventhandler.util.DataBuilder.overridenEventId
 import io.inventi.eventstore.eventhandler.util.DataBuilder.streamName
-import io.inventi.eventstore.eventhandler.util.Handler
-import io.inventi.eventstore.eventhandler.util.WithAsyncHandlerAssertions
-import io.inventi.eventstore.eventhandler.util.WithEventstoreOperations
+import io.inventi.eventstore.util.ObjectMapperFactory
+import io.mockk.every
 import io.mockk.mockk
-import org.amshove.kluent.shouldNotBeNull
+import io.mockk.verify
+import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
-import org.springframework.beans.factory.annotation.Autowired
-import org.springframework.boot.test.context.SpringBootTest
-import org.springframework.boot.test.context.TestConfiguration
-import org.springframework.context.annotation.Bean
-import org.springframework.context.annotation.Import
-import org.springframework.test.annotation.DirtiesContext
-import org.springframework.test.context.ActiveProfiles
-import java.util.UUID
+import java.util.concurrent.CompletableFuture.completedFuture
+import java.util.concurrent.CompletableFuture.failedFuture
 
-@SpringBootTest(classes = [EventStoreToolsSubscriptionsConfiguration::class])
-@Import(PersistentSubscriptionsTest.Config::class)
-@ActiveProfiles("test")
-@DirtiesContext // ensures that eventStore bean is not reused, because each bean has a different test container port
-class PersistentSubscriptionsTest : EventStoreIntegrationTest(), WithAsyncHandlerAssertions, WithEventstoreOperations {
-    @Autowired
-    private lateinit var processedEventDao: ProcessedEventDao
+class PersistentSubscriptionsTest {
+    private val eventStore = mockk<EventStore>()
+    private val persistentSubscriptions = PersistentSubscriptions(
+            handlers = listOf(Handler()),
+            eventStore = eventStore,
+            objectMapper = ObjectMapperFactory.createDefaultObjectMapper(),
+            subscriptionProperties = SubscriptionProperties(),
+            transactionTemplate = mockk(),
+            idempotencyStorage = mockk()
+    )
 
-    @Autowired
-    override lateinit var eventStore: EventStore
-
-    @Autowired
-    override lateinit var handler: Handler
-
-    @Test
-    fun `handles event`() {
-        // given
-        val event = event()
-
-        // when
-        appendEvent(event, eventId)
-
-        // then
-        assertEventWasHandled(event, eventId)
+    @BeforeEach
+    fun setUp() {
+        every { eventStore.createPersistentSubscription(any(), any(), any<PersistentSubscriptionSettings>()) } returns
+                completedFuture(PersistentSubscriptionCreateResult(PersistentSubscriptionCreateStatus.Success))
     }
 
     @Test
-    fun `ignores already handled event`() {
+    fun `retries subscription if it cannot be started`() {
         // given
-        val eventId = UUID.randomUUID().toString()
-        val metadataWithOverridenId = metadata()
-
-        appendEvent(event(), overridenEventId)
-        waitUntilEventIsHandled(overridenEventId)
+        every { eventStore.subscribeToPersistent(any(), any(), any()) } returns
+                failedFuture(RuntimeException()) andThen
+                completedFuture(mockk())
 
         // when
-        appendEvent(event(), eventId, metadataWithOverridenId)
+        persistentSubscriptions.afterPropertiesSet()
 
         // then
-        assertEventWasNotHandled(eventId)
-    }
-
-    @Test
-    fun `stores processed event`() {
-        // given
-        val eventId = UUID.randomUUID().toString()
-
-        // when
-        appendEvent(event(), eventId)
-        waitUntilEventIsHandled(eventId)
-
-        // then
-        processedEventDao.findBy(eventId, streamName, groupName, eventType).shouldNotBeNull()
-    }
-
-    @TestConfiguration
-    class Config {
-        @Bean
-        fun testHandler(): Handler = mockk(relaxed = true)
-
-        @Bean
-        fun persistentSubscriptionHandler(handler: Handler) = TestPersistentSubscriptionHandler(handler = handler)
-    }
-
-    class TestPersistentSubscriptionHandler(
-            override val streamName: String = DataBuilder.streamName,
-            override val groupName: String = DataBuilder.groupName,
-            private val handler: Handler,
-    ) : PersistentSubscriptionHandler {
-        @EventHandler
-        fun onEvent(event: EventType, eventIds: EventIds) {
-            handler.handle(event, eventIds = eventIds)
+        verify(exactly = 2) {
+            eventStore.subscribeToPersistent(streamName, groupName, any())
         }
     }
+
+    private class Handler(
+            override val streamName: String = DataBuilder.streamName,
+            override val groupName: String = DataBuilder.groupName,
+    ) : PersistentSubscriptionHandler
 }
