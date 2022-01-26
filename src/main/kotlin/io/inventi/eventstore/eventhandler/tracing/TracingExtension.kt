@@ -7,13 +7,11 @@ import com.github.msemys.esjc.RecordedEvent
 import io.inventi.eventstore.eventhandler.Cleanup
 import io.inventi.eventstore.eventhandler.EventHandlerExtension
 import io.inventi.eventstore.eventtracing.EventMetadataTraceExtractor
-import org.springframework.boot.autoconfigure.condition.ConditionalOnBean
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty
 import org.springframework.stereotype.Component
 import java.lang.reflect.Method
 
 @Component
-@ConditionalOnBean(Tracing::class)
 @ConditionalOnProperty("eventstore.tracing.enabled", matchIfMissing = true)
 class TracingExtension(
         private val tracing: Tracing,
