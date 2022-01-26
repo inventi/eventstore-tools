@@ -55,7 +55,7 @@ sealed class InitialPosition {
         override fun eventNumber(eventStore: EventStore, objectMapper: ObjectMapper): Long {
             val readResult = eventStore.readEvent(streamName, END, true).join()
 
-            return readResult.event.originalEventNumber()
+            return readResult.event.originalEventNumber() + 1
         }
     }
 }
