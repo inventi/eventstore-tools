@@ -24,18 +24,24 @@ repositories {
 
 dependencies {
     val jacksonVersion = "2.11.3"
-    val testContainersVersion = "1.15.3"
-    val micrometerVersion = "1.7.0"
+    val testContainersVersion = "1.16.2"
 
-    api("com.github.msemys:esjc:2.3.0")
+    api("com.github.msemys:esjc:2.4.0")
 
-    compileOnly("com.google.cloud:spring-cloud-gcp-starter-trace:2.0.3")
-    compileOnly("io.micrometer:micrometer-registry-stackdriver:$micrometerVersion")
     compileOnly("org.springframework.boot:spring-boot-starter-data-redis")
+
+    implementation("io.zipkin.brave:brave:5.13.2")
+    implementation("io.micrometer:micrometer-core:1.7.0")
 
     implementation("org.springframework.boot:spring-boot-starter")
     implementation("org.springframework.boot:spring-boot-starter-web")
-    implementation("org.springframework:spring-tx")
+    implementation("org.springframework.integration:spring-integration-jdbc")
+
+    implementation("org.jdbi:jdbi3-core:3.27.0")
+    implementation("org.jdbi:jdbi3-kotlin:3.27.0")
+    implementation("org.jdbi:jdbi3-kotlin-sqlobject:3.27.0")
+
+    implementation("org.flywaydb:flyway-core")
 
     implementation("com.fasterxml.jackson.dataformat:jackson-dataformat-yaml:$jacksonVersion")
     implementation("com.fasterxml.jackson.module:jackson-module-kotlin:$jacksonVersion")
@@ -43,21 +49,18 @@ dependencies {
     implementation("org.jetbrains.kotlin:kotlin-reflect")
     implementation("org.jetbrains.kotlin:kotlin-stdlib-jdk8")
 
-    implementation("org.jdbi:jdbi3-core:3.8.0")
-    implementation("org.jdbi:jdbi3-kotlin:3.8.0")
-    implementation("org.jdbi:jdbi3-kotlin-sqlobject:3.8.0")
-
-    implementation("org.flywaydb:flyway-core:6.0.8")
-
     implementation("com.google.guava:guava:30.0-jre")
     implementation("org.springframework.boot:spring-boot-starter-test") {
         exclude(group = "org.junit.vintage", module = "junit-vintage-engine")
     }
+    implementation("org.springframework.boot:spring-boot-starter-jdbc")
 
-    testCompileOnly("io.micrometer:micrometer-registry-stackdriver:$micrometerVersion")
-    testImplementation("io.mockk:mockk:1.9.3")
-    testImplementation("org.testcontainers:testcontainers:$testContainersVersion")
+    testImplementation("io.mockk:mockk:1.12.2")
+    testImplementation("org.awaitility:awaitility:4.1.1")
+    testImplementation("org.amshove.kluent:kluent:1.68")
     testImplementation("org.testcontainers:junit-jupiter:$testContainersVersion")
+    testImplementation("org.testcontainers:postgresql:$testContainersVersion")
+    testImplementation("org.postgresql:postgresql:42.3.1")
 }
 
 tasks.withType<KotlinCompile> {

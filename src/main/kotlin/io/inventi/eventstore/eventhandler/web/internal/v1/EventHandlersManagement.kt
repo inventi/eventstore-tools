@@ -1,11 +1,10 @@
 package io.inventi.eventstore.eventhandler.web.internal.v1
 
-import io.inventi.eventstore.eventhandler.IdempotentEventClassifierDao
-import io.inventi.eventstore.eventhandler.IdempotentEventHandler
+import io.inventi.eventstore.eventhandler.EventstoreEventHandler
 import io.inventi.eventstore.eventhandler.annotation.ConditionalOnSubscriptionsEnabled
-import io.inventi.eventstore.eventhandler.model.IdempotentEventClassifierRecord
+import io.inventi.eventstore.eventhandler.dao.ProcessedEvent
+import io.inventi.eventstore.eventhandler.dao.ProcessedEventDao
 import io.inventi.eventstore.util.IdConverter
-import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.http.HttpStatus
 import org.springframework.http.ResponseEntity
 import org.springframework.web.bind.annotation.GetMapping
@@ -20,8 +19,8 @@ import org.springframework.web.bind.annotation.RestController
 @RequestMapping("/internal/v1/idempotent-event-handlers")
 @ConditionalOnSubscriptionsEnabled
 class EventHandlersManagement(
-        final val eventHandlers: List<IdempotentEventHandler> = emptyList(),
-        val idempotentEventClassifierDao: IdempotentEventClassifierDao
+        private val eventHandlers: List<EventstoreEventHandler> = emptyList(),
+        private val processedEventDao: ProcessedEventDao,
 ) {
     val handlerNames = eventHandlers.map { it::class.simpleName }
 
@@ -33,7 +32,7 @@ class EventHandlersManagement(
     @PostMapping("/{handlerName}/skip-event")
     fun skipEvent(
             @PathVariable handlerName: String,
-            @RequestBody request: SkipEventRequest
+            @RequestBody request: SkipEventRequest,
     ): ResponseEntity<*> {
         val handler = eventHandlers.find { it::class.simpleName == handlerName }
                 ?: return handlerNotFound(handlerName)
@@ -41,9 +40,8 @@ class EventHandlersManagement(
         val eventId = request.eventId
                 ?: return missingEventId()
 
-        val record = IdempotentEventClassifierRecord(eventId, handler.streamName, request.eventStreamId, handler.groupName, request.eventType)
-
-        idempotentEventClassifierDao.insert(handler.tableName, record)
+        val record = ProcessedEvent(eventId, handler.streamName, request.eventStreamId, handler.groupName, request.eventType)
+        processedEventDao.save(record)
 
         return ResponseEntity.status(HttpStatus.CREATED).body(record)
     }
@@ -62,7 +60,7 @@ data class SkipEventRequest(
         val javaEventId: String? = null,
         val csharpEventId: String? = null,
         val eventStreamId: String = "UNKNOWN_MANUALLY_INSERTED",
-        val eventType: String
+        val eventType: String,
 ) {
     val eventId =
             this.javaEventId

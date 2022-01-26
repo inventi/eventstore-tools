@@ -1,0 +1,3 @@
+package io.inventi.eventstore.eventhandler
+
+interface CatchupSubscriptionHandler : EventstoreEventHandler

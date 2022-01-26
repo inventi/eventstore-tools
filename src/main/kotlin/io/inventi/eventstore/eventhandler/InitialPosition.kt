@@ -3,45 +3,59 @@ package io.inventi.eventstore.eventhandler
 import com.fasterxml.jackson.databind.ObjectMapper
 import com.fasterxml.jackson.module.kotlin.readValue
 import com.github.msemys.esjc.EventStore
-import com.github.msemys.esjc.StreamPosition
-
+import com.github.msemys.esjc.StreamPosition.END
+import com.github.msemys.esjc.StreamPosition.START
 
 sealed class InitialPosition {
-    abstract fun getFirstEventNumberToHandle(eventStore: EventStore, objectMapper: ObjectMapper): Long
+    fun replayEventsUntil(eventStore: EventStore, objectMapper: ObjectMapper) = if (replayEvents) {
+        eventNumber(eventStore, objectMapper)
+    } else {
+        START
+    }
 
-    class FromBeginning : InitialPosition() {
-        override fun getFirstEventNumberToHandle(eventStore: EventStore, objectMapper: ObjectMapper): Long {
-            return StreamPosition.START
+    fun startSubscriptionFrom(eventStore: EventStore, objectMapper: ObjectMapper) = if (!replayEvents) {
+        eventNumber(eventStore, objectMapper)
+    } else {
+        START
+    }
+
+    protected abstract val replayEvents: Boolean
+    protected abstract fun eventNumber(eventStore: EventStore, objectMapper: ObjectMapper): Long
+
+    object FromBeginning : InitialPosition() {
+        override val replayEvents: Boolean
+            get() = false
+
+        override fun eventNumber(eventStore: EventStore, objectMapper: ObjectMapper): Long {
+            return START
         }
     }
 
     class TakeOverPersistentSubscription(
-            val streamName: String,
-            val groupName: String
+            private val streamName: String,
+            private val groupName: String,
+            override val replayEvents: Boolean = true,
     ) : InitialPosition() {
-        override fun getFirstEventNumberToHandle(eventStore: EventStore, objectMapper: ObjectMapper): Long {
+        override fun eventNumber(eventStore: EventStore, objectMapper: ObjectMapper): Long {
             val subscriptionCheckpointStream = "\$persistentsubscription-$streamName::$groupName-checkpoint"
-            val readResult = eventStore.readEvent(subscriptionCheckpointStream, StreamPosition.END, true).join()
+            val readResult = eventStore.readEvent(subscriptionCheckpointStream, END, true).join()
 
             val data = readResult.event?.event?.data
             return data?.let {
                 val oldPosition: Long = objectMapper.readValue(data)
                 oldPosition + 1
-            } ?: DEFAULT_START_POSITION
-        }
-
-        companion object DEFAULTS {
-            private const val DEFAULT_START_POSITION = StreamPosition.START
+            } ?: START
         }
     }
 
     class FromTheEndOfStream(
-        private val streamName: String,
+            private val streamName: String,
+            override val replayEvents: Boolean = true,
     ) : InitialPosition() {
-        override fun getFirstEventNumberToHandle(eventStore: EventStore, objectMapper: ObjectMapper): Long {
-            val readResult = eventStore.readEvent(streamName, StreamPosition.END, true).join()
+        override fun eventNumber(eventStore: EventStore, objectMapper: ObjectMapper): Long {
+            val readResult = eventStore.readEvent(streamName, END, true).join()
 
-            return readResult.event.originalEventNumber()
+            return readResult.event.originalEventNumber() + 1
         }
     }
 }

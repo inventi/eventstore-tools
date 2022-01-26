@@ -2,6 +2,7 @@ package io.inventi.eventstore
 
 import io.inventi.eventstore.util.LoggerDelegate
 import org.springframework.boot.context.properties.ConfigurationProperties
+import org.springframework.boot.context.properties.EnableConfigurationProperties
 import org.springframework.boot.web.client.RestTemplateBuilder
 import org.springframework.context.annotation.ComponentScan
 import org.springframework.context.annotation.Configuration
@@ -21,11 +22,14 @@ import java.io.File
 import java.net.URL
 
 
-@ConfigurationProperties("eventstore")
 @Configuration
-@Validated
 @ComponentScan("io.inventi.eventstore")
-class EventStoreInitConfig {
+@EnableConfigurationProperties(EventStoreProperties::class)
+class EventStoreInitConfig
+
+@Validated
+@ConfigurationProperties("eventstore")
+class EventStoreProperties {
     var projectionsInit: ProjectionsProperties = ProjectionsProperties()
     lateinit var endpoint: String
     lateinit var username: String
@@ -37,7 +41,6 @@ class EventStoreInitConfig {
 }
 
 class ProjectionsProperties {
-
     var enabled: Boolean = true
     var folder: String = "/js"
     var updateOnConflict: Boolean = true
@@ -48,7 +51,7 @@ class ProjectionsProperties {
 @Component
 class ProjectionInit(
         private val builder: RestTemplateBuilder,
-        private val eventstore: EventStoreInitConfig
+        private val eventStoreProperties: EventStoreProperties,
 ) {
 
     val version_prefix = "//version:"
@@ -61,18 +64,18 @@ class ProjectionInit(
     @EventListener
     fun onInit(evt: ContextRefreshedEvent) {
 
-        if (!eventstore.projectionsInit.enabled) {
+        if (!eventStoreProperties.projectionsInit.enabled) {
             logger.info("Projection init disabled, skipping")
             return
         }
 
         val template = builder
-                .rootUri(eventstore.endpoint)
-                .additionalInterceptors(BasicAuthenticationInterceptor(eventstore.username, eventstore.password))
+                .rootUri(eventStoreProperties.endpoint)
+                .additionalInterceptors(BasicAuthenticationInterceptor(eventStoreProperties.username, eventStoreProperties.password))
                 .build()
 
 
-        val path: URL? = javaClass.getResource(eventstore.projectionsInit.folder)
+        val path: URL? = javaClass.getResource(eventStoreProperties.projectionsInit.folder)
         path?.let {
             val walk = File(it.toURI()).walkBottomUp()
             walk.filter { it.extension == "js" }.forEach {
@@ -101,9 +104,9 @@ class ProjectionInit(
         }.onFailure {
             val msg = it.message ?: ""
 
-            if (msg.contains("409 Conflict") && eventstore.projectionsInit.updateOnConflict) {
+            if (msg.contains("409 Conflict") && eventStoreProperties.projectionsInit.updateOnConflict) {
                 maybeUpdateProjection(template, name, versionedContent, version)
-            } else if (eventstore.projectionsInit.failOnError) {
+            } else if (eventStoreProperties.projectionsInit.failOnError) {
                 logger.error("Can't initialize projections due to the error, giving up.")
                 throw it
             } else {
@@ -128,7 +131,7 @@ class ProjectionInit(
             } else {
                 logger.info("Projection \"${name}\" has same version, no changes were made")
             }
-        } else if (eventstore.projectionsInit.overwriteWithoutVersion) {
+        } else if (eventStoreProperties.projectionsInit.overwriteWithoutVersion) {
 
             updateProjection(template, content, name)
             logger.info("Projection \"${name}\" was overwritten as version not found")
