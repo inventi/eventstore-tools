@@ -1,11 +1,11 @@
 package io.inventi.eventstore
 
-import io.inventi.eventstore.eventhandler.config.JdbiConfig
+import io.inventi.eventstore.eventhandler.config.EventStoreToolsJdbiConfig
 import org.springframework.boot.autoconfigure.EnableAutoConfiguration
 import org.springframework.context.annotation.Configuration
 import org.springframework.context.annotation.Import
 
 @Configuration
 @EnableAutoConfiguration
-@Import(JdbiConfig::class)
+@Import(EventStoreToolsJdbiConfig::class)
 class EventStoreToolsDBConfiguration
