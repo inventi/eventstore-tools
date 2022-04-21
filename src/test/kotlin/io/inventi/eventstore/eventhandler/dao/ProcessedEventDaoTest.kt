@@ -39,7 +39,6 @@ class ProcessedEventDaoTest {
         processedEventDao.save(processedEvent)
 
         // when
-
         val affectedRows = processedEventDao.save(processedEvent)
 
         // then

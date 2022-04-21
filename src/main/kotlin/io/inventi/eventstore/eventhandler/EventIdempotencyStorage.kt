@@ -7,6 +7,7 @@ import io.inventi.eventstore.eventhandler.dao.ProcessedEvent
 import io.inventi.eventstore.eventhandler.dao.ProcessedEventDao
 import io.inventi.eventstore.eventhandler.exception.EventAlreadyHandledException
 import io.inventi.eventstore.eventhandler.util.effectiveEventId
+import io.inventi.eventstore.eventhandler.util.effectiveEventType
 import org.springframework.stereotype.Component
 import java.time.Instant
 
@@ -20,7 +21,7 @@ class EventIdempotencyStorage(
     fun storeRecord(streamName: String, groupName: String, event: RecordedEvent) {
         val idempotentEventRecord = ProcessedEvent(
                 eventId = event.effectiveEventId(objectMapper),
-                eventType = event.eventType,
+                eventType = event.effectiveEventType(objectMapper),
                 streamName = streamName,
                 eventStreamId = event.eventStreamId,
                 groupName = groupName,

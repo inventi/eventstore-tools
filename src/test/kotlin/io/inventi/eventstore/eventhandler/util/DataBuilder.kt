@@ -30,11 +30,20 @@ object DataBuilder {
 
     fun event() = EventType("random-value")
 
-    fun metadata() = TestMetadata(
-            overrideEventId = "11111111-1111-1111-1111-111111111111",
-            overrideEventNumber = "0",
-            transformedFromEventNumber = 0,
-            transformedFromJavaEventId = "11111111-1111-1111-1111-111111111111"
+    fun metadata(
+            transformedFromJavaEventId: String = overridenEventId,
+            transformedFromEventNumber: Long = 0,
+            transformedFromEventType: String = eventType,
+            overrideEventId: String = transformedFromJavaEventId,
+            overrideEventNumber: String = transformedFromEventNumber.toString(),
+            overrideEventType: String = transformedFromEventType,
+    ) = TestMetadata(
+            overrideEventId = overrideEventId,
+            overrideEventNumber = overrideEventNumber,
+            overrideEventType = overrideEventType,
+            transformedFromEventNumber = transformedFromEventNumber,
+            transformedFromJavaEventId = transformedFromJavaEventId,
+            transformedFromEventType = transformedFromEventType,
     )
 
     fun eventIds(id: String = eventId) = EventIds(null, id)
@@ -45,11 +54,14 @@ object DataBuilder {
 
     fun recordedEvent(): RecordedEvent = resolvedEvent().event
 
-    fun resolvedEventWithMetadata(): ResolvedEvent = buildResolvedEvent(metadata())
+    fun resolvedEventWithMetadata(metadata: TestMetadata = metadata()): ResolvedEvent = buildResolvedEvent(metadata)
 
-    fun recordedEventWithMetadata(): RecordedEvent = resolvedEventWithMetadata().event
+    fun recordedEventWithMetadata(metadata: TestMetadata = metadata()): RecordedEvent = resolvedEventWithMetadata(metadata).event
 
-    fun processedEvent(eventId: String = DataBuilder.eventId) = ProcessedEvent(
+    fun processedEvent(
+            eventId: String = DataBuilder.eventId,
+            eventType: String = DataBuilder.eventType,
+    ) = ProcessedEvent(
             eventId = eventId,
             streamName = streamName,
             eventStreamId = eventStreamId,

@@ -1,14 +1,15 @@
 package io.inventi.eventstore.eventhandler
 
 import io.inventi.eventstore.eventhandler.dao.ProcessedEventDao
+import io.inventi.eventstore.eventhandler.exception.EventAlreadyHandledException
 import io.inventi.eventstore.eventhandler.util.DataBuilder.createdAt
 import io.inventi.eventstore.eventhandler.util.DataBuilder.groupName
+import io.inventi.eventstore.eventhandler.util.DataBuilder.metadata
 import io.inventi.eventstore.eventhandler.util.DataBuilder.overridenEventId
 import io.inventi.eventstore.eventhandler.util.DataBuilder.processedEvent
 import io.inventi.eventstore.eventhandler.util.DataBuilder.recordedEvent
 import io.inventi.eventstore.eventhandler.util.DataBuilder.recordedEventWithMetadata
 import io.inventi.eventstore.eventhandler.util.DataBuilder.streamName
-import io.inventi.eventstore.eventhandler.exception.EventAlreadyHandledException
 import io.inventi.eventstore.util.ObjectMapperFactory
 import io.mockk.every
 import io.mockk.mockk
@@ -44,6 +45,24 @@ class EventIdempotencyStorageTest {
 
         // then
         verify(exactly = 1) { processedEventDao.save(processedEvent(eventId = overridenEventId)) }
+    }
+
+    @Test
+    fun `stores idempotency record with overriden event type`() {
+        // given
+        val overridenEventType = "overridenEventType"
+        every { processedEventDao.save(any()) } returns 1
+
+        // when
+        eventIdempotencyStorage.storeRecord(streamName, groupName, recordedEventWithMetadata(metadata(overrideEventType = overridenEventType)))
+
+        // then
+        verify(exactly = 1) {
+            processedEventDao.save(processedEvent(
+                    eventType = overridenEventType,
+                    eventId = overridenEventId
+            ))
+        }
     }
 
     @Test
