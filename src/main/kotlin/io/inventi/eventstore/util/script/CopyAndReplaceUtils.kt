@@ -40,7 +40,9 @@ import com.github.msemys.esjc.RecordedEvent
 import com.github.msemys.esjc.ResolvedEvent
 import com.github.msemys.esjc.StreamMetadata
 import com.github.msemys.esjc.StreamMetadataResult
+import io.inventi.eventstore.util.LoggerDelegate
 import io.inventi.eventstore.util.ObjectMapperFactory
+import org.slf4j.Logger
 import java.net.InetSocketAddress
 import java.time.Duration
 
@@ -65,6 +67,7 @@ data class EsConfig(
         val esPass: String = "changeit",
         val heartbeatTimeoutInSeconds: Long = 10,
         val operationTimeoutInSeconds: Long = 60,
+        val maxOperationRetries: Int = 10,
 )
 
 fun withEventStore(
@@ -78,6 +81,7 @@ fun withEventStore(
             .maxReconnections(3)
             .heartbeatTimeout(Duration.ofSeconds(esConfig.heartbeatTimeoutInSeconds))
             .operationTimeout(Duration.ofSeconds(esConfig.operationTimeoutInSeconds))
+            .maxOperationRetries(esConfig.maxOperationRetries)
             .singleNodeAddress(InetSocketAddress.createUnresolved(esConfig.esHost, esConfig.esPort))
             .userCredentials(esConfig.esUser, esConfig.esPass)
             .build()
@@ -94,7 +98,12 @@ data class CopyAndReplaceOperation(
         private val bufferSize: Int,
         private val writeChunkSize: Int,
 ) {
+    companion object {
+        private val logger: Logger by LoggerDelegate()
+    }
+
     fun copyAndReplace(streamId: String, eventNumbers: List<Long>, transformFn: (event: RecordedEvent, mapper: ObjectMapper) -> ByteArray?) {
+        logger.info("Starting copy and replace operation for stream: $streamId")
         val (expectedStreamVersion, events) = transformEvents(streamId) { resolvedEvent, objectMapper ->
             val event = resolvedEvent.event
             val (data, meta) = if (resolvedEvent.originalEventNumber() in eventNumbers) {
@@ -104,7 +113,7 @@ data class CopyAndReplaceOperation(
                 event.data to copyMetadata(event)
             }
 
-            println("#${event.eventNumber}: ${meta?.toString(Charsets.UTF_8)} --> ${data?.toString(Charsets.UTF_8)}")
+            logger.debug("#${event.eventNumber}: ${meta?.toString(Charsets.UTF_8)} --> ${data?.toString(Charsets.UTF_8)}")
             data?.let {
                 EventData.newBuilder()
                         .type(event.eventType)
@@ -119,28 +128,27 @@ data class CopyAndReplaceOperation(
     }
 
     fun copyAndReplace(streamId: String, transformFn: (event: ResolvedEvent, mapper: ObjectMapper) -> EventData?) {
+        logger.info("Starting copy and replace operation for stream: $streamId")
         val (expectedStreamVersion, events) = transformEvents(streamId, transformFn)
         appendEvents(streamId, events, expectedStreamVersion)
         truncateBefore(expectedStreamVersion + 1, streamId)
     }
 
-    fun copyMetadata(event: RecordedEvent, shouldPutOverrideIds: Boolean = true): ByteArray? {
+    fun copyMetadata(event: RecordedEvent): ByteArray? {
         val metaData = event.metadata.takeIf { it.isNotEmpty() } ?: EMPTY_OBJECT_BYTE_ARRAY
         val newMeta = objectMapper.readTree(metaData).apply {
             this as ObjectNode
 
-            if (shouldPutOverrideIds) {
-                val previousIdOverride = path(OVERRIDE_EVENT_ID)?.textValue()
-                val previousNumberOverride = path(OVERRIDE_EVENT_NUMBER)?.textValue()
-                val previousNumberType = path(OVERRIDE_EVENT_TYPE)?.textValue()
-                put(OVERRIDE_EVENT_ID, previousIdOverride ?: event.eventId.toString())
-                put(OVERRIDE_EVENT_NUMBER, previousNumberOverride ?: event.eventNumber.toString())
-                put(OVERRIDE_EVENT_TYPE, previousNumberType ?: event.eventType)
+            val previousIdOverride = path(OVERRIDE_EVENT_ID)?.textValue()
+            val previousNumberOverride = path(OVERRIDE_EVENT_NUMBER)?.textValue()
+            val previousNumberType = path(OVERRIDE_EVENT_TYPE)?.textValue()
+            put(OVERRIDE_EVENT_ID, previousIdOverride ?: event.eventId.toString())
+            put(OVERRIDE_EVENT_NUMBER, previousNumberOverride ?: event.eventNumber.toString())
+            put(OVERRIDE_EVENT_TYPE, previousNumberType ?: event.eventType)
 
-                put(TRANSFORMED_FROM_ID, event.eventId.toString())
-                put(TRANSFORMED_FROM_NUMBER, event.eventNumber)
-                put(TRANSFORMED_FROM_TYPE, event.eventType)
-            }
+            put(TRANSFORMED_FROM_ID, event.eventId.toString())
+            put(TRANSFORMED_FROM_NUMBER, event.eventNumber)
+            put(TRANSFORMED_FROM_TYPE, event.eventType)
         }
 
         return objectMapper.writeValueAsBytes(newMeta)
@@ -160,26 +168,30 @@ data class CopyAndReplaceOperation(
 
     private fun firstEventNumber(streamId: String) = eventStore.getStreamMetadata(streamId)
             .thenApply { it.streamMetadata.truncateBefore }
-            .get()
+            .join()
             ?: 0
 
     private fun appendEvents(streamId: String, events: Collection<EventData>, initialExpectedVersion: Long) {
-        eventStore.startTransaction(streamId, initialExpectedVersion).get().use { transaction ->
-            events.chunked(writeChunkSize).forEach { events ->
-                transaction.write(events).get()
-            }
-            transaction.commit().get()
+        logger.info("Appending new ${events.size} events to stream: $streamId")
+
+        var expectedVersion = initialExpectedVersion
+        events.chunked(writeChunkSize).forEach { eventsChunk ->
+            logger.info("Appending ${eventsChunk.size} events chunk to stream: $streamId")
+
+            eventStore.appendToStream(streamId, expectedVersion, eventsChunk).join()
+            expectedVersion += eventsChunk.size
         }
     }
 
     private fun truncateBefore(eventNumber: Long, stream: String) {
         val readResult: StreamMetadataResult? = eventStore.getStreamMetadata(stream).join()
         val metastreamVersion = readResult?.metastreamVersion ?: ExpectedVersion.ANY
-        println("metastreamVersion -> $metastreamVersion")
+        logger.debug("metastreamVersion -> $metastreamVersion")
         val updated = (readResult?.streamMetadata?.toBuilder() ?: StreamMetadata.newBuilder())
                 .truncateBefore(eventNumber)
                 .build()
 
+        logger.info("Truncating stream: $stream, truncateBefore: $eventNumber")
         eventStore.setStreamMetadata(stream, metastreamVersion, updated).join()
     }
 }

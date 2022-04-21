@@ -16,7 +16,7 @@ fun RecordedEvent.overriddenEventIdOrNull(objectMapper: ObjectMapper) =
             readTree(metadata).path(OVERRIDE_EVENT_ID).textValue()
         }.getOrNull()
 
-fun RecordedEvent.overriddenEventTypeOrNull(objectMapper: ObjectMapper) =
+private fun RecordedEvent.overriddenEventTypeOrNull(objectMapper: ObjectMapper) =
         objectMapper.runCatching {
             readTree(metadata).path(OVERRIDE_EVENT_TYPE).textValue()
         }.getOrNull()

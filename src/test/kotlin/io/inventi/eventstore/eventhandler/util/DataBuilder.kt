@@ -14,7 +14,7 @@ import io.inventi.eventstore.util.ObjectMapperFactory
 import io.mockk.every
 import io.mockk.mockk
 import java.time.Instant
-import java.util.*
+import java.util.UUID
 
 object DataBuilder {
     private val objectMapper = ObjectMapperFactory.createDefaultObjectMapper()
