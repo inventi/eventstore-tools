@@ -23,6 +23,8 @@ abstract class Subscriptions<T : EventstoreEventHandler>(private val handlers: L
 
     protected abstract fun startSubscription(handler: T, onFailure: (FailureType) -> Unit)
 
+    protected open fun dropSubscription(handler: T) { }
+
     private fun onSubscriptionFailure(handler: T): (FailureType) -> Unit = {
         when (it) {
             FailureType.EVENTSTORE_CLIENT_ERROR -> {
@@ -31,6 +33,7 @@ abstract class Subscriptions<T : EventstoreEventHandler>(private val handlers: L
             }
             FailureType.UNEXPECTED_ERROR -> {
                 logger.error("Handler ${handler::class.simpleName} failed. It will not be resubscribed.")
+                dropSubscription(handler)
             }
         }
     }

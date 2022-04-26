@@ -103,6 +103,12 @@ class CatchupSubscriptions(
                 .update(eventStore.subscribeToStreamFrom(handler.streamName, checkpoint, settings, listener))
     }
 
+    override fun dropSubscription(handler: CatchupSubscriptionHandler) {
+        subscriptionsByHandler
+            .getValue(handler)
+            .drop()
+    }
+
     @EventListener
     fun handleEvent(event: OnGrantedEvent) {
         logger.info("Received catch-up subscription leadership for role: ${event.role}. Starting subscriptions...")

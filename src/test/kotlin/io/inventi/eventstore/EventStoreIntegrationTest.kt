@@ -7,6 +7,8 @@ import org.testcontainers.containers.wait.strategy.Wait
 import org.testcontainers.junit.jupiter.Container
 import org.testcontainers.junit.jupiter.Testcontainers
 import org.testcontainers.utility.DockerImageName
+import java.time.Duration
+import java.time.temporal.TemporalUnit
 
 @Testcontainers
 abstract class EventStoreIntegrationTest {
@@ -22,6 +24,7 @@ abstract class EventStoreIntegrationTest {
             withEnv("EVENTSTORE_ENABLE_EXTERNAL_TCP", "true")
             withEnv("EVENTSTORE_EXT_TCP_PORT", "1113")
             waitingFor(Wait.forHealthcheck())
+            withStartupTimeout(Duration.ofSeconds(150))
             withExposedPorts(1113)
         }
 
