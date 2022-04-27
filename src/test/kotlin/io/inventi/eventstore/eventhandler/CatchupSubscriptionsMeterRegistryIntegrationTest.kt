@@ -12,6 +12,7 @@ import io.inventi.eventstore.eventhandler.util.DataBuilder.eventId
 import io.inventi.eventstore.eventhandler.util.Handler
 import io.inventi.eventstore.eventhandler.util.WithEventstoreOperations
 import io.inventi.eventstore.eventhandler.util.WithMeterRegistryAssertions
+import io.micrometer.core.instrument.ImmutableTag
 import io.micrometer.core.instrument.MeterRegistry
 import io.micrometer.core.instrument.simple.SimpleMeterRegistry
 import io.mockk.every
@@ -41,13 +42,13 @@ class CatchupSubscriptionsMeterRegistryIntegrationTest : EventStoreIntegrationTe
     private lateinit var handler: Handler
 
     @Test
-    fun `when handler is subscribed to stream it's gauge value is seen as active`() {
+    fun `show metric's gauge as active when handler is subscribed to stream`() {
         // expect
         assertHandlerGaugeValue(1.0)
     }
 
     @Test
-    fun `when handler subscription is dropped it's gauge value is seen as inactive`() {
+    fun `show metric's gauge as inactive when handler is unsubscribed from stream`() {
         // given
         val event = event()
 
@@ -60,12 +61,17 @@ class CatchupSubscriptionsMeterRegistryIntegrationTest : EventStoreIntegrationTe
         assertHandlerGaugeValue(0.0)
     }
 
-    private fun assertHandlerGaugeValue(value: Double) {
-        assertGaugeWithTagHasValue(CATCHUP_SUBSCRIPTIONS_CONNECTIONS_GAUGE, handlerTag, value)
+    private fun assertHandlerGaugeValue(expectedGaugeValue: Double) {
+        assertGaugeWithTagHasValue(
+            CATCHUP_SUBSCRIPTIONS_CONNECTIONS_GAUGE_NAME,
+            ImmutableTag(CATCHUP_SUBSCRIPTIONS_CONNECTIONS_GAUGE_TAG_KEY, handlerTag),
+            expectedGaugeValue
+        )
     }
 
     companion object {
-        private const val CATCHUP_SUBSCRIPTIONS_CONNECTIONS_GAUGE = "eventstore-tools.catchup.subscriptions.connections"
+        private const val CATCHUP_SUBSCRIPTIONS_CONNECTIONS_GAUGE_NAME = "eventstore-tools.catchup.subscriptions.connections"
+        private const val CATCHUP_SUBSCRIPTIONS_CONNECTIONS_GAUGE_TAG_KEY = "handler"
         private val handlerTag = TestCatchupSubscriptionHandler::class.simpleName.orEmpty()
     }
 
