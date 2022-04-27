@@ -1,29 +1,24 @@
 package io.inventi.eventstore.eventhandler.util
 
-import io.micrometer.core.instrument.Gauge
 import io.micrometer.core.instrument.MeterRegistry
-import org.junit.Assert.assertEquals
+import io.micrometer.core.instrument.Tag
+import org.amshove.kluent.shouldBeEqualTo
 import org.testcontainers.shaded.org.awaitility.Awaitility
 import java.util.concurrent.TimeUnit
 
 interface WithMeterRegistryAssertions {
     var meterRegistry: MeterRegistry
 
-    private val assertDelta: Double
-        get() = 1e-6
-
-    fun assertGaugeWithTagHasValue(gaugeName: String, meterTag: String, meterValue: Double) {
+    fun assertGaugeWithTagHasValue(gaugeName: String, gaugeTag: Tag, expectedGaugeValue: Double) {
         Awaitility.await().pollDelay(1, TimeUnit.SECONDS).atMost(5, TimeUnit.SECONDS).untilAsserted {
-            assertEquals(valueOfGaugeWithTag(gaugeName, meterTag), meterValue, assertDelta)
+            valueOfGaugeWithTag(gaugeName, gaugeTag) shouldBeEqualTo expectedGaugeValue
         }
     }
 
-    private fun valueOfGaugeWithTag(gaugeName: String, meterTag: String): Double {
+    private fun valueOfGaugeWithTag(gaugeName: String, gaugeTag: Tag): Double {
         return meterRegistry.find(gaugeName)
-            .gauges()
-            .find { it.hasTag(meterTag) }!!
+            .tag(gaugeTag.key, gaugeTag.value)
+            .gauge()!!
             .value()
     }
-
-    private fun Gauge.hasTag(tag: String) = id.tags.find { it.value == tag } != null
 }
