@@ -26,7 +26,7 @@ dependencies {
     val jacksonVersion = "2.11.3"
     val testContainersVersion = "1.16.2"
 
-    api("com.github.msemys:esjc:2.4.0")
+    api("com.github.msemys:esjc:2.5.0")
 
     compileOnly("org.springframework.boot:spring-boot-starter-data-redis")
 
