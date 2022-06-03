@@ -28,7 +28,7 @@ object DataBuilder {
     const val eventType = "EventType"
     const val eventNumber = 1L
 
-    fun event() = EventType("random-value")
+    fun event(value: String = "random-value") = EventType(value)
 
     fun metadata(
             transformedFromJavaEventId: String = overridenEventId,

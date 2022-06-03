@@ -5,6 +5,7 @@ import com.github.msemys.esjc.PersistentSubscriptionCreateResult
 import com.github.msemys.esjc.PersistentSubscriptionCreateStatus
 import com.github.msemys.esjc.PersistentSubscriptionSettings
 import io.inventi.eventstore.eventhandler.config.SubscriptionProperties
+import io.inventi.eventstore.eventhandler.dao.SubscriptionInitialPositionDao
 import io.inventi.eventstore.eventhandler.util.DataBuilder
 import io.inventi.eventstore.eventhandler.util.DataBuilder.groupName
 import io.inventi.eventstore.eventhandler.util.DataBuilder.streamName
@@ -19,10 +20,12 @@ import java.util.concurrent.CompletableFuture.failedFuture
 
 class PersistentSubscriptionsTest {
     private val eventStore = mockk<EventStore>()
+    private val subscriptionInitialPositionDao = mockk<SubscriptionInitialPositionDao>()
     private val persistentSubscriptions = PersistentSubscriptions(
             handlers = listOf(Handler()),
             eventStore = eventStore,
             objectMapper = ObjectMapperFactory.createDefaultObjectMapper(),
+            subscriptionInitialPositionDao = subscriptionInitialPositionDao,
             subscriptionProperties = SubscriptionProperties(),
             transactionTemplate = mockk(),
             idempotencyStorage = mockk()
@@ -30,6 +33,8 @@ class PersistentSubscriptionsTest {
 
     @BeforeEach
     fun setUp() {
+        every { subscriptionInitialPositionDao.createIfNotExists(any()) } returns 1
+        every { subscriptionInitialPositionDao.initialPosition(any(), any()) } returns 0
         every { eventStore.createPersistentSubscription(any(), any(), any<PersistentSubscriptionSettings>()) } returns
                 completedFuture(PersistentSubscriptionCreateResult(PersistentSubscriptionCreateStatus.Success))
     }

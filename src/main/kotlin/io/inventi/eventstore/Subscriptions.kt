@@ -19,11 +19,11 @@ abstract class Subscriptions<T : EventstoreEventHandler>(private val handlers: L
         }
     }
 
-    protected abstract fun ensureSubscription(handler: T)
+    internal abstract fun ensureSubscription(handler: T)
 
-    protected abstract fun startSubscription(handler: T, onFailure: (FailureType) -> Unit)
+    internal abstract fun startSubscription(handler: T, onFailure: (FailureType) -> Unit)
 
-    protected open fun dropSubscription(handler: T) { }
+    internal abstract fun dropSubscription(handler: T)
 
     private fun onSubscriptionFailure(handler: T): (FailureType) -> Unit = {
         when (it) {

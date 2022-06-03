@@ -12,6 +12,8 @@ logging:
   level:
     io.inventi: TRACE
     com.github.msemys.esjc.EventStore: TRACE
+    com.github.msemys.esjc.CatchUpSubscription: TRACE
+    com.github.msemys.esjc.PersistentSubscription: TRACE
     com.github.msemys.esjc.subscription.manager.SubscriptionManager: TRACE
 
 eventstore:

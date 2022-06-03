@@ -7,7 +7,7 @@ import org.jdbi.v3.sqlobject.statement.SqlQuery
 import org.jdbi.v3.sqlobject.statement.SqlUpdate
 
 interface SubscriptionCheckpointDao {
-    @SqlUpdate(INSERT_CATCHUP_SUBSCRIPTON)
+    @SqlUpdate(INSERT_CATCHUP_SUBSCRIPTION)
     fun createIfNotExists(@BindBean checkpoint: SubscriptionCheckpoint): Int
 
     @SqlUpdate(INCREMENT_CHECKPOINT)
@@ -23,7 +23,7 @@ interface SubscriptionCheckpointDao {
         private const val TABLE_NAME = "eventstore_subscription_checkpoint"
 
         @Language("SQL")
-        private const val INSERT_CATCHUP_SUBSCRIPTON = """
+        private const val INSERT_CATCHUP_SUBSCRIPTION = """
             INSERT INTO $TABLE_NAME (
                 group_name,
                 stream_name,
