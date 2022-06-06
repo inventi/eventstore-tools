@@ -39,25 +39,22 @@ class CatchupSubscriptionsInitialPositionIntegrationTest : EventStoreIntegration
     @Autowired
     private lateinit var catchupSubscriptions: CatchupSubscriptions
 
-    @Autowired
-    private lateinit var catchupSubscriptionHandler: EndOfStreamCatchupSubscriptionHandler
-
     @Test
-    protected fun `🍆💦`() {
+    fun `handles event added while subscription was dropped with handler's initial position set to end of stream`() {
         // given
         val irrelevantEventId = UUID.randomUUID().toString()
         val irrelevantEvent = event("previously-existed-event")
         appendEvent(irrelevantEvent, irrelevantEventId)
         waitUntilEventIsHandled(irrelevantEventId)
 
-        catchupSubscriptions.dropSubscription(catchupSubscriptionHandler)
+        catchupSubscriptions.dropSubscriptions()
 
         // when
         val newEvent = event("event-added-while-subscription-was-dropped")
         appendEvent(newEvent, eventId)
         assertEventWasNotHandled(eventId)
 
-        catchupSubscriptions.startSubscription(catchupSubscriptionHandler) { }
+        catchupSubscriptions.startSubscriptions()
 
         // then
         assertEventWasHandled(newEvent, eventId)

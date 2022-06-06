@@ -3,27 +3,38 @@ package io.inventi.eventstore
 import io.inventi.eventstore.eventhandler.EventstoreEventHandler
 import io.inventi.eventstore.eventhandler.EventstoreEventListener.FailureType
 import io.inventi.eventstore.util.LoggerDelegate
+import org.springframework.beans.factory.DisposableBean
 import org.springframework.beans.factory.InitializingBean
 
-abstract class Subscriptions<T : EventstoreEventHandler>(private val handlers: List<T>) : InitializingBean {
+abstract class Subscriptions<T : EventstoreEventHandler>(private val handlers: List<T>) : InitializingBean, DisposableBean {
     protected val logger by LoggerDelegate()
 
     override fun afterPropertiesSet() {
         startSubscriptions()
     }
 
-    protected open fun startSubscriptions() {
+    override fun destroy() {
+        dropSubscriptions()
+    }
+
+    internal open fun startSubscriptions() {
         handlers.forEach {
             ensureSubscription(it)
             startSubscription(it, onSubscriptionFailure(it))
         }
     }
 
-    internal abstract fun ensureSubscription(handler: T)
+    internal open fun dropSubscriptions() {
+        handlers.forEach {
+            dropSubscription(it)
+        }
+    }
 
-    internal abstract fun startSubscription(handler: T, onFailure: (FailureType) -> Unit)
+    protected abstract fun ensureSubscription(handler: T)
 
-    internal abstract fun dropSubscription(handler: T)
+    protected abstract fun startSubscription(handler: T, onFailure: (FailureType) -> Unit)
+
+    protected abstract fun dropSubscription(handler: T)
 
     private fun onSubscriptionFailure(handler: T): (FailureType) -> Unit = {
         when (it) {

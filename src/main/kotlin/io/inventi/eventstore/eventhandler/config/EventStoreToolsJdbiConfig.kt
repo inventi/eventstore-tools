@@ -9,13 +9,11 @@ import org.jdbi.v3.sqlobject.kotlin.onDemand
 import org.springframework.boot.autoconfigure.condition.ConditionalOnMissingBean
 import org.springframework.context.annotation.Bean
 import org.springframework.context.annotation.Configuration
-import org.springframework.context.annotation.DependsOn
 import org.springframework.jdbc.datasource.TransactionAwareDataSourceProxy
 import javax.sql.DataSource
 
 @ConditionalOnSubscriptionsEnabled
 @Configuration
-@DependsOn(value = ["flyway", "flywayInitializer"])
 class EventStoreToolsJdbiConfig {
     @ConditionalOnMissingBean
     @Bean

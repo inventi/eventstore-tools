@@ -39,25 +39,22 @@ class PersistentSubscriptionsInitialPositionIntegrationTest : EventStoreIntegrat
     @Autowired
     private lateinit var persistentSubscriptions: PersistentSubscriptions
 
-    @Autowired
-    private lateinit var persistentSubscriptionHandler: EndOfStreamPersistentSubscriptionHandler
-
     @Test
-    protected fun `🍆💦`() {
+    fun `handles event added while subscription was dropped with handler's initial position set to end of stream`() {
         // given
         val irrelevantEventId = UUID.randomUUID().toString()
         val irrelevantEvent = event("previously-existed-event")
         appendEvent(irrelevantEvent, irrelevantEventId)
         waitUntilEventIsHandled(irrelevantEventId)
 
-        persistentSubscriptions.dropSubscription(persistentSubscriptionHandler)
+        persistentSubscriptions.dropSubscriptions()
 
         // when
         val newEvent = event("event-added-while-subscription-was-dropped")
         appendEvent(newEvent, eventId)
         assertEventWasNotHandled(eventId)
 
-        persistentSubscriptions.startSubscription(persistentSubscriptionHandler) { }
+        persistentSubscriptions.startSubscriptions()
 
         // then
         assertEventWasHandled(newEvent, eventId)
