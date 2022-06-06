@@ -63,13 +63,15 @@ class CatchupSubscriptions(
                 .takeUnless { it < 0 } // use null instead of -1 to indicate the start of the stream
 
         with(handler) {
-            subscriptionCheckpointDao.createIfNotExists(SubscriptionCheckpoint(groupName, streamName, checkpoint))
-            subscriptionInitialPositionDao.createIfNotExists(
-                SubscriptionInitialPosition(
-                    groupName,
-                    streamName,
-                    initialPosition.replayEventsUntil(eventStore, objectMapper))
-            )
+            transactionTemplate.execute {
+                subscriptionCheckpointDao.createIfNotExists(SubscriptionCheckpoint(groupName, streamName, checkpoint))
+                subscriptionInitialPositionDao.createIfNotExists(
+                    SubscriptionInitialPosition(
+                        groupName,
+                        streamName,
+                        initialPosition.replayEventsUntil(eventStore, objectMapper))
+                )
+            }
         }
     }
 
