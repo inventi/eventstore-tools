@@ -5,6 +5,7 @@ import com.fasterxml.jackson.module.kotlin.readValue
 import com.github.msemys.esjc.EventStore
 import com.github.msemys.esjc.StreamPosition.END
 import com.github.msemys.esjc.StreamPosition.START
+import io.inventi.eventstore.util.LoggerDelegate
 
 sealed class InitialPosition {
     fun replayEventsUntil(eventStore: EventStore, objectMapper: ObjectMapper) = if (replayEvents) {
@@ -55,7 +56,7 @@ sealed class InitialPosition {
         override fun eventNumber(eventStore: EventStore, objectMapper: ObjectMapper): Long {
             val readResult = eventStore.readEvent(streamName, END, true).join()
 
-            return readResult.event.originalEventNumber() + 1
+            return readResult.event?.let { it.originalEventNumber() + 1 } ?: START
         }
     }
 }

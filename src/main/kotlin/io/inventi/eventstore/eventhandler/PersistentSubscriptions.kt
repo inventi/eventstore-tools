@@ -8,6 +8,8 @@ import io.inventi.eventstore.Subscriptions
 import io.inventi.eventstore.eventhandler.EventstoreEventListener.FailureType
 import io.inventi.eventstore.eventhandler.annotation.ConditionalOnSubscriptionsEnabled
 import io.inventi.eventstore.eventhandler.config.SubscriptionProperties
+import io.inventi.eventstore.eventhandler.dao.SubscriptionInitialPosition
+import io.inventi.eventstore.eventhandler.dao.SubscriptionInitialPositionDao
 import io.inventi.eventstore.eventhandler.feature.EventIdempotency
 import io.inventi.eventstore.eventhandler.feature.InTransaction
 import org.springframework.boot.autoconfigure.condition.ConditionalOnBean
@@ -20,31 +22,41 @@ import java.util.concurrent.CompletionException
 @ConditionalOnSubscriptionsEnabled
 @ConditionalOnBean(PersistentSubscriptionHandler::class)
 class PersistentSubscriptions(
-        handlers: List<PersistentSubscriptionHandler>,
-        private val eventStore: EventStore,
-        private val objectMapper: ObjectMapper,
-        private val subscriptionProperties: SubscriptionProperties,
-        private val transactionTemplate: TransactionTemplate,
-        private val idempotencyStorage: EventIdempotencyStorage,
+    handlers: List<PersistentSubscriptionHandler>,
+    private val eventStore: EventStore,
+    private val objectMapper: ObjectMapper,
+    private val subscriptionInitialPositionDao: SubscriptionInitialPositionDao,
+    private val subscriptionProperties: SubscriptionProperties,
+    private val transactionTemplate: TransactionTemplate,
+    private val idempotencyStorage: EventIdempotencyStorage,
 ) : Subscriptions<PersistentSubscriptionHandler>(handlers) {
+    private val subscriptionsByHandler = mutableMapOf<PersistentSubscriptionHandler, PersistentSubscriptionState>().apply {
+        handlers.forEach { put(it, PersistentSubscriptionState()) }
+    }
+
     override fun startSubscription(handler: PersistentSubscriptionHandler, onFailure: (FailureType) -> Unit) {
         logger.info("Starting persistent subscription for handler: ${handler::class.simpleName}")
         val listener = PersistentSubscriptionEventListener(
                 EventstoreEventListener(
                         handler,
-                        handler.initialPosition.replayEventsUntil(eventStore, objectMapper),
+                        subscriptionInitialPositionDao.initialPosition(handler.groupName, handler.streamName),
                         objectMapper,
                         EventIdempotency(handler, idempotencyStorage),
                         InTransaction(transactionTemplate),
                 ),
+                handler.state(),
                 onFailure,
         )
 
-        eventStore.subscribeToPersistent(handler.streamName, handler.groupName, listener).exceptionally { exception ->
+        val subscription = eventStore.subscribeToPersistent(handler.streamName, handler.groupName, listener).exceptionally { exception ->
             logger.error("Failed to start persistent subscription for handler: ${handler::class.simpleName}", exception)
             onFailure(FailureType.EVENTSTORE_CLIENT_ERROR)
             null
         }.join()
+
+        subscription?.let {
+            handler.state().update(it)
+        }
     }
 
     override fun ensureSubscription(handler: PersistentSubscriptionHandler) {
@@ -56,7 +68,16 @@ class PersistentSubscriptions(
                 .messageTimeout(Duration.ofMillis(subscriptionProperties.messageTimeoutMillis))
                 .build()
         try {
-            createSubscription(settings, handler.streamName, handler.groupName)
+            with(handler) {
+                createSubscription(settings, streamName, groupName)
+                subscriptionInitialPositionDao.createIfNotExists(
+                    SubscriptionInitialPosition(
+                        groupName,
+                        streamName,
+                        initialPosition.replayEventsUntil(eventStore, objectMapper)
+                    )
+                )
+            }
         } catch (e: CompletionException) {
             if ("already exists" in (e.cause?.message.orEmpty())) {
                 updateSubscription(settings, handler.streamName, handler.groupName)
@@ -66,6 +87,12 @@ class PersistentSubscriptions(
             }
         }
     }
+
+    override fun dropSubscription(handler: PersistentSubscriptionHandler) {
+        handler.state().drop()
+    }
+
+    private fun PersistentSubscriptionHandler.state() = subscriptionsByHandler.getValue(this)
 
     private fun createSubscription(settings: PersistentSubscriptionSettings, streamName: String, groupName: String) {
         logger.info("Ensuring persistent subscription for stream for '$streamName' with groupName '$groupName' with $settings")

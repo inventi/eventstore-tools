@@ -1,7 +1,6 @@
 package io.inventi.eventstore.eventhandler
 
 import com.fasterxml.jackson.databind.ObjectMapper
-import com.github.msemys.esjc.CatchUpSubscription
 import com.github.msemys.esjc.CatchUpSubscriptionSettings
 import com.github.msemys.esjc.EventStore
 import io.inventi.eventstore.Subscriptions
@@ -9,6 +8,8 @@ import io.inventi.eventstore.eventhandler.annotation.ConditionalOnSubscriptionsE
 import io.inventi.eventstore.eventhandler.config.SubscriptionProperties
 import io.inventi.eventstore.eventhandler.dao.SubscriptionCheckpoint
 import io.inventi.eventstore.eventhandler.dao.SubscriptionCheckpointDao
+import io.inventi.eventstore.eventhandler.dao.SubscriptionInitialPosition
+import io.inventi.eventstore.eventhandler.dao.SubscriptionInitialPositionDao
 import io.inventi.eventstore.eventhandler.feature.EventIdempotency
 import io.inventi.eventstore.eventhandler.feature.InTransaction
 import io.inventi.eventstore.eventhandler.feature.StoreCheckpoint
@@ -21,21 +22,6 @@ import org.springframework.integration.leader.event.OnRevokedEvent
 import org.springframework.stereotype.Component
 import org.springframework.transaction.support.TransactionTemplate
 
-private data class SubscriptionState(private var subscription: CatchUpSubscription? = null) {
-    val isActive get() = subscription != null
-    val gaugeValue get() = if (isActive) 1 else 0
-
-    fun update(newSubscription: CatchUpSubscription) {
-        drop()
-        subscription = newSubscription
-    }
-
-    fun drop() {
-        subscription?.stop()
-        subscription = null
-    }
-}
-
 @Component
 @ConditionalOnSubscriptionsEnabled
 @ConditionalOnBean(CatchupSubscriptionHandler::class)
@@ -44,15 +30,16 @@ class CatchupSubscriptions(
         private val eventStore: EventStore,
         private val objectMapper: ObjectMapper,
         private val subscriptionCheckpointDao: SubscriptionCheckpointDao,
+        private val subscriptionInitialPositionDao: SubscriptionInitialPositionDao,
         private val transactionTemplate: TransactionTemplate,
         private val idempotencyStorage: EventIdempotencyStorage,
         properties: SubscriptionProperties,
         meterRegistry: MeterRegistry? = null,
 ) : Subscriptions<CatchupSubscriptionHandler>(handlers) {
     private var isLeader = !properties.enableCatchupSubscriptionLeaderElection
-    private val subscriptionsByHandler = mutableMapOf<CatchupSubscriptionHandler, SubscriptionState>().apply {
+    private val subscriptionsByHandler = mutableMapOf<CatchupSubscriptionHandler, CatchupSubscriptionState>().apply {
         handlers.forEach { handler ->
-            put(handler, SubscriptionState())
+            put(handler, CatchupSubscriptionState())
 
             if (meterRegistry != null) {
                 Gauge.builder("eventstore-tools.catchup.subscriptions.connections") { getValue(handler).gaugeValue }
@@ -75,39 +62,50 @@ class CatchupSubscriptions(
                 .let { it - 1 } // -1 because catch-up subscription start event numbers are exclusive
                 .takeUnless { it < 0 } // use null instead of -1 to indicate the start of the stream
 
-        subscriptionCheckpointDao.createIfNotExists(SubscriptionCheckpoint(handler.groupName, handler.streamName, checkpoint))
+        with(handler) {
+            transactionTemplate.execute {
+                subscriptionCheckpointDao.createIfNotExists(SubscriptionCheckpoint(groupName, streamName, checkpoint))
+                subscriptionInitialPositionDao.createIfNotExists(
+                    SubscriptionInitialPosition(
+                        groupName,
+                        streamName,
+                        initialPosition.replayEventsUntil(eventStore, objectMapper))
+                )
+            }
+        }
     }
 
     override fun startSubscription(handler: CatchupSubscriptionHandler, onFailure: (EventstoreEventListener.FailureType) -> Unit) {
         if (!isLeader) return logger.info("Subscription for handler ${this::class.simpleName} will not be started because current instance was not elected as a leader")
 
         logger.info("Starting catch-up subscription for handler: ${handler::class.simpleName}")
-        val checkpoint = subscriptionCheckpointDao.currentCheckpoint(handler.groupName, handler.streamName)
-        val settings = CatchUpSubscriptionSettings.newBuilder()
-                .resolveLinkTos(true)
-                .build()
         val listener = CatchupSubscriptionEventListener(
                 EventstoreEventListener(
                         handler,
-                        handler.initialPosition.replayEventsUntil(eventStore, objectMapper),
+                        subscriptionInitialPositionDao.initialPosition(handler.groupName, handler.streamName),
                         objectMapper,
                         EventIdempotency(handler, idempotencyStorage),
                         StoreCheckpoint(handler, subscriptionCheckpointDao),
                         InTransaction(transactionTemplate),
                 ),
+                handler.state(),
                 onFailure,
         )
 
-        subscriptionsByHandler
-                .getValue(handler)
-                .update(eventStore.subscribeToStreamFrom(handler.streamName, checkpoint, settings, listener))
+        val checkpoint = subscriptionCheckpointDao.currentCheckpoint(handler.groupName, handler.streamName)
+        val subscriptionSettings = CatchUpSubscriptionSettings.newBuilder()
+                .resolveLinkTos(true)
+                .build()
+
+        handler.state()
+                .update(eventStore.subscribeToStreamFrom(handler.streamName, checkpoint, subscriptionSettings, listener))
     }
 
     override fun dropSubscription(handler: CatchupSubscriptionHandler) {
-        subscriptionsByHandler
-            .getValue(handler)
-            .drop()
+        handler.state().drop()
     }
+
+    private fun CatchupSubscriptionHandler.state(): CatchupSubscriptionState = subscriptionsByHandler.getValue(this)
 
     @EventListener
     fun handleEvent(event: OnGrantedEvent) {

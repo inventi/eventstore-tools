@@ -3,6 +3,7 @@ package io.inventi.eventstore.eventhandler.config
 import io.inventi.eventstore.eventhandler.annotation.ConditionalOnSubscriptionsEnabled
 import io.inventi.eventstore.eventhandler.dao.ProcessedEventDao
 import io.inventi.eventstore.eventhandler.dao.SubscriptionCheckpointDao
+import io.inventi.eventstore.eventhandler.dao.SubscriptionInitialPositionDao
 import org.jdbi.v3.core.Jdbi
 import org.jdbi.v3.sqlobject.kotlin.onDemand
 import org.springframework.boot.autoconfigure.condition.ConditionalOnMissingBean
@@ -23,4 +24,7 @@ class EventStoreToolsJdbiConfig {
 
     @Bean
     fun subscriptionCheckpointDao(jdbi: Jdbi) = jdbi.onDemand<SubscriptionCheckpointDao>()
+
+    @Bean
+    fun subscriptionInitialPositionDao(jdbi: Jdbi) = jdbi.onDemand<SubscriptionInitialPositionDao>()
 }

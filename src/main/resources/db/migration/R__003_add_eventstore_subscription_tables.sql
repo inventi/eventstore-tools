@@ -13,3 +13,10 @@ CREATE TABLE IF NOT EXISTS EVENTSTORE_SUBSCRIPTION_LOCK (
 	CREATED_DATE TIMESTAMP NOT NULL,
 	constraint INT_LOCK_PK primary key (LOCK_KEY, REGION)
 );
+
+CREATE TABLE IF NOT EXISTS eventstore_subscription_initial_position (
+    group_name             text,
+    stream_name            text,
+    initial_position       bigint NOT NULL,
+    primary key (group_name, stream_name)
+);
