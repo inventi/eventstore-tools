@@ -67,23 +67,26 @@ class PersistentSubscriptions(
                 .maxRetryCount(subscriptionProperties.maxRetryCount)
                 .messageTimeout(Duration.ofMillis(subscriptionProperties.messageTimeoutMillis))
                 .build()
-        try {
-            with(handler) {
-                createSubscription(settings, streamName, groupName)
-                subscriptionInitialPositionDao.createIfNotExists(
-                    SubscriptionInitialPosition(
-                        groupName,
-                        streamName,
-                        initialPosition.replayEventsUntil(eventStore, objectMapper)
+
+        transactionTemplate.executeWithoutResult {
+            try {
+                with(handler) {
+                    subscriptionInitialPositionDao.createIfNotExists(
+                        SubscriptionInitialPosition(
+                            groupName,
+                            streamName,
+                            initialPosition.replayEventsUntil(eventStore, objectMapper)
+                        )
                     )
-                )
-            }
-        } catch (e: CompletionException) {
-            if ("already exists" in (e.cause?.message.orEmpty())) {
-                updateSubscription(settings, handler.streamName, handler.groupName)
-            } else {
-                logger.error("Error when ensuring persistent subscription for stream for '${handler.streamName}' with groupName '${handler.groupName}'", e)
-                throw e
+                    createSubscription(settings, streamName, groupName)
+                }
+            } catch (e: CompletionException) {
+                if ("already exists" in (e.cause?.message.orEmpty())) {
+                    updateSubscription(settings, handler.streamName, handler.groupName)
+                } else {
+                    logger.error("Error when ensuring persistent subscription for stream for '${handler.streamName}' with groupName '${handler.groupName}'", e)
+                    throw e
+                }
             }
         }
     }
