@@ -15,7 +15,7 @@ data class CatchupSubscriptionState(internal var subscription: CatchUpSubscripti
     fun drop() {
         subscription?.let {
             subscription = null
-            it.stop(Duration.ofSeconds(10))
+            it.stop(Duration.ofSeconds(60))
         }
     }
 }
