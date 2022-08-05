@@ -4,7 +4,6 @@ import com.fasterxml.jackson.databind.ObjectMapper
 import com.github.msemys.esjc.EventStore
 import com.github.msemys.esjc.PersistentSubscriptionCreateStatus
 import com.github.msemys.esjc.PersistentSubscriptionSettings
-import io.inventi.eventstore.Subscriptions
 import io.inventi.eventstore.eventhandler.EventstoreEventListener.FailureType
 import io.inventi.eventstore.eventhandler.annotation.ConditionalOnSubscriptionsEnabled
 import io.inventi.eventstore.eventhandler.config.SubscriptionProperties

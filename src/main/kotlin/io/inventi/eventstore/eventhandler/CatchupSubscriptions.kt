@@ -3,7 +3,6 @@ package io.inventi.eventstore.eventhandler
 import com.fasterxml.jackson.databind.ObjectMapper
 import com.github.msemys.esjc.CatchUpSubscriptionSettings
 import com.github.msemys.esjc.EventStore
-import io.inventi.eventstore.Subscriptions
 import io.inventi.eventstore.eventhandler.annotation.ConditionalOnSubscriptionsEnabled
 import io.inventi.eventstore.eventhandler.config.SubscriptionProperties
 import io.inventi.eventstore.eventhandler.dao.SubscriptionCheckpoint

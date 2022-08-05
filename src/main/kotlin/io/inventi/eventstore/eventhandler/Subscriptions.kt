@@ -1,6 +1,5 @@
-package io.inventi.eventstore
+package io.inventi.eventstore.eventhandler
 
-import io.inventi.eventstore.eventhandler.EventstoreEventHandler
 import io.inventi.eventstore.eventhandler.EventstoreEventListener.FailureType
 import io.inventi.eventstore.util.LoggerDelegate
 import org.springframework.beans.factory.DisposableBean
@@ -39,7 +38,7 @@ abstract class Subscriptions<T : EventstoreEventHandler>(private val handlers: L
     private fun onSubscriptionFailure(handler: T): (FailureType) -> Unit = {
         when (it) {
             FailureType.EVENTSTORE_CLIENT_ERROR -> {
-                logger.info("Resubscribing failed handler ${this::class.simpleName}")
+                logger.info("Resubscribing failed handler ${handler::class.simpleName}")
                 startSubscription(handler, onSubscriptionFailure(handler))
             }
             FailureType.UNEXPECTED_ERROR -> {
