@@ -17,11 +17,13 @@ data class CatchupSubscriptionState(private var subscription: CatchUpSubscriptio
     internal val gaugeValue get() = if (isActive) 1 else 0
 
     fun update(newSubscription: CatchUpSubscription) {
+        logger.debug("Updating from catch-up subscription $subscription to new subscription $newSubscription")
         drop()
         subscription = newSubscription
     }
 
     fun drop() {
+        logger.debug("Dropping catch-up subscription $subscription")
         subscription?.let {
             subscription = null
             try {

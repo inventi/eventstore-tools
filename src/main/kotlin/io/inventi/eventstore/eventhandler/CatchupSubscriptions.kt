@@ -75,7 +75,7 @@ class CatchupSubscriptions(
     }
 
     override fun startSubscription(handler: CatchupSubscriptionHandler, onFailure: (EventstoreEventListener.FailureType) -> Unit) {
-        if (!isLeader) return logger.info("Subscription for handler ${this::class.simpleName} will not be started because current instance was not elected as a leader")
+        if (!isLeader) return logger.info("Subscription for handler ${handler::class.simpleName} will not be started because current instance was not elected as a leader")
 
         logger.info("Starting catch-up subscription for handler: ${handler::class.simpleName}")
         val listener = CatchupSubscriptionEventListener(
