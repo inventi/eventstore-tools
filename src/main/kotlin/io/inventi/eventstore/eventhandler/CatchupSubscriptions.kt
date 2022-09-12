@@ -110,7 +110,15 @@ class CatchupSubscriptions(
     fun handleEvent(event: OnGrantedEvent) {
         logger.info("Received catch-up subscription leadership for role: ${event.role}. Starting subscriptions...")
         isLeader = true
-        startSubscriptions()
+        try {
+            startSubscriptions()
+        } catch (exception: Exception) {
+            logger.warn(
+                "Revoking catch-up subscription leadership for role: ${event.role} because leader could not start subscriptions...",
+                exception
+            )
+            event.context.yield()
+        }
     }
 
     @EventListener
