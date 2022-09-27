@@ -33,7 +33,7 @@ There are two ways to consume events from EventStore using this library:
 
 Persistent subscriptions use competing consumers message pattern. These subscriptions should be used when event order
 does not matter, and you wish to load balance your event consumers. By default, it uses **round robin** strategy to
-distribute events for given consumer group. Read more about persistent subscriptions
+distribute events for given consumer group (you can override it in PersistentSubscriptionHandler). Read more about persistent subscriptions
 in [EventStoreDB docs](https://developers.eventstore.com/server/v21.10/persistent-subscriptions/)
 
 In order to register persistent subscription, you must

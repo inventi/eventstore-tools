@@ -1,3 +1,8 @@
 package io.inventi.eventstore.eventhandler
 
-interface PersistentSubscriptionHandler : EventstoreEventHandler
+import com.github.msemys.esjc.system.SystemConsumerStrategy
+
+interface PersistentSubscriptionHandler : EventstoreEventHandler {
+    val consumerStrategy: SystemConsumerStrategy
+        get() = SystemConsumerStrategy.ROUND_ROBIN
+}

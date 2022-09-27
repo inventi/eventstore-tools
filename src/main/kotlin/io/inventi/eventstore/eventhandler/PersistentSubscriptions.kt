@@ -65,6 +65,7 @@ class PersistentSubscriptions(
                 .minCheckPointCount(subscriptionProperties.minCheckpointCount)
                 .maxRetryCount(subscriptionProperties.maxRetryCount)
                 .messageTimeout(Duration.ofMillis(subscriptionProperties.messageTimeoutMillis))
+                .namedConsumerStrategy(handler.consumerStrategy)
                 .build()
 
         transactionTemplate.executeWithoutResult {
