@@ -1,6 +1,6 @@
 spring:
   datasource:
-    url: jdbc:tc:postgresql:9.6.8://localhost:5432
+    url: jdbc:tc:postgresql:15.1://localhost:5432
     driver-class-name: org.testcontainers.jdbc.ContainerDatabaseDriver
   flyway:
     placeholderReplacement: true
